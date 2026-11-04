@@ -1,0 +1,35 @@
+# Orbe
+
+App web estático (sem build) de tarefas, agenda e diário das áreas da vida, publicado como PWA no
+GitHub Pages: https://davibequer.github.io/orbe/
+
+Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celular por padrão; a partir de
+900px vira layout de computador (menu lateral, duas colunas, janelas centralizadas, atalhos N e Esc).
+
+## O que tem
+- **Hoje:** topo preto (saudação, progresso, 4 blocos da matriz de Eisenhower que filtram), "Próximo importante",
+  tarefas de hoje e atrasadas por prioridade, amanhã (ou próximos dias) e sem data.
+- **Agenda:** Semana/Mês, hoje em preto na página da semana; no computador arrasta tarefa para outro dia.
+- **Vida:** esferas (equilíbrio da semana por área), áreas que abrem/fecham, partes com tarefas e anotações,
+  criar/editar áreas (nome, ícone, cor) e partes.
+- **Números:** no dia certo, remarcadas, atrasadas, tempo até fazer, gráfico de linha, matriz, as que mais voltam, por área.
+- Mudar a data de uma tarefa conta como remarcada (`hist`).
+
+Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 200).
+Dados em `localStorage['orbe.v1']` (só no aparelho). O Supabase fica para depois, quando o usuário pedir.
+
+## Regra de versão (obrigatória)
+Toda alteração no app: some 1 em `self.APP_VERSION` em `version.js` (número inteiro) e adicione
+`## v<número> — <data>` no topo do `CHANGELOG.md`. A versão dá nome ao cache do `sw.js`; arquivo novo
+usado pelo app entra em `ASSETS` no `sw.js` e no passo "Montar o site" do workflow.
+
+Não use `confirm()`, `alert()` nem inputs nativos de data, hora ou cor (no Android abrem janelas pretas do
+sistema). Use as janelas próprias (`askConfirm`, calendário e colunas de hora do app).
+
+## Quando publicar direto e quando perguntar
+- Pedido específico: implementar, testar, aumentar a versão e fazer push na `main` (deploy automático).
+- Mudança muito grande ou pedido de ideias/opções: apresentar a proposta e publicar só depois de aprovado.
+
+## Publicação
+`.github/workflows/pages.yml` publica a `main` no GitHub Pages a cada push (Settings → Pages → Source:
+GitHub Actions) e cria a tag `v<versão>`. Falha se o app mudou sem a versão ter sido alterada.
