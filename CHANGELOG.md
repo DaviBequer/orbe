@@ -2,6 +2,9 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v6 — 2026-11-04
+- Botão de olho no campo de senha para ver o que está digitando (toque de novo para esconder).
+
 ## v5 — 2026-11-04
 - Sincronização ligada ao projeto Supabase do Orbe: em Configurações (engrenagem) dá para criar conta e entrar
   com e-mail e senha; celular e computador ficam com as mesmas tarefas, áreas e anotações.

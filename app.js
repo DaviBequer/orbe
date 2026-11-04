@@ -457,6 +457,7 @@ APP.addEventListener('click', (e) => {
     askConfirm(`Excluir a área ${area(k).n}?`, 'Excluir', () => { DB.areas = DB.areas.filter((a) => a.k !== k); DB.tasks = DB.tasks.filter((t) => t.a !== k); DB.notes = DB.notes.filter((n) => n.a !== k); save(); closeSheet('area'); renderAll(); toast(used ? `Área e ${pl(used, 'tarefa excluída', 'tarefas excluídas')}.` : 'Área excluída.'); });
     return;
   }
+  if ((x = c('[data-eye]'))) { const i = $('#spass'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; x.innerHTML = ic(show ? 'visibility_off' : 'visibility', 22); x.setAttribute('aria-pressed', show); x.setAttribute('aria-label', show ? 'Esconder senha' : 'Mostrar senha'); i.focus(); return; }
   if (c('[data-login]') || c('[data-signup]')) { auth(c('[data-signup]') ? 'signup' : 'login'); return; }
   if (c('[data-logout]')) { SYNC.client.auth.signOut().then(() => { toast('Desconectado. As tarefas continuam neste aparelho.'); refreshSet(); }); return; }
   if (c('[data-syncnow]')) { sync(true); return; }
@@ -611,7 +612,7 @@ function syncSection() {
   if (SYNC.user) return `<div class="lbl">Sincronização</div><div class="set-row"><span>Conectado como</span><small>${esc(SYNC.user.email)}</small></div><div class="set-row"><span>Última sincronização</span><small data-synclast>${SYNC.last ? agoTxt(SYNC.last) : '–'}</small></div><div class="save-row"><button class="del" data-syncnow>${ic('sync', 18)}Sincronizar agora</button><button class="del" data-logout>${ic('logout', 18)}Sair</button></div>`;
   return `<div class="lbl">Sincronizar celular e computador</div><p class="hint">Entre com o mesmo e-mail e senha nos dois aparelhos para ver as mesmas tarefas. O que já está aqui é mantido.</p>
   <input class="ttl in2" id="semail" type="email" placeholder="E-mail" autocomplete="email" inputmode="email">
-  <input class="ttl in2" id="spass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password">
+  <div class="pw"><input class="ttl in2" id="spass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="Mostrar senha" aria-pressed="false">${ic('visibility', 22)}</button></div>
   <div class="save-row"><button class="del" data-signup>Criar conta</button><button class="save" data-login>Entrar</button></div>`;
 }
 function refreshSet() { const sh = $('[data-sh="set"]'); if (!sh.classList.contains('open')) return; const n = $('#uname'); const v = n ? n.value : DB.name; sh.innerHTML = settingsSheet(); if ($('#uname')) $('#uname').value = v; }
