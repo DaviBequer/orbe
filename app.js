@@ -555,11 +555,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) rend
 setInterval(() => { if (!document.hidden && UI.tab === 'home') render('home'); }, 60000);
 
 /* ---------- sincronização (Supabase) ---------- */
-// Preencha com os dados do projeto (Supabase → Project Settings → API). A chave "anon public" pode ficar no app:
+// Projeto Supabase do Orbe. A chave publishable pode ficar no app:
 // a tabela é protegida por RLS, cada pessoa só lê e grava a própria linha.
-const SUPA_URL = '';
-const SUPA_KEY = '';
-const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+const SUPA_URL = 'https://ydfupdkaxtuczuhxbspq.supabase.co';
+const SUPA_KEY = 'sb_publishable_wmqbNAqI5GuqjzPAQyCdJg_tnGgKzKk';
+const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.99.1/dist/umd/supabase.js';
 const SYNC = { client: null, user: null, state: 'off', last: null, timer: null, busy: false, again: false };
 const SYNC_IC = { ok: ['cloud_done', 'Sincronizado'], sync: ['sync', 'Sincronizando…'], err: ['cloud_off', 'Não consegui sincronizar'], offline: ['cloud_off', 'Sem internet: salvo no aparelho'] };
 function syncIcon() { const v = SYNC_IC[SYNC.state]; return v ? `<span class="syncic" data-syncic title="${v[1]}">${ic(v[0], 18)}</span>` : ''; }

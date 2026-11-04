@@ -2,6 +2,10 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v5 — 2026-11-04
+- Sincronização ligada ao projeto Supabase do Orbe: em Configurações (engrenagem) dá para criar conta e entrar
+  com e-mail e senha; celular e computador ficam com as mesmas tarefas, áreas e anotações.
+
 ## v4 — 2026-11-04
 - No computador tudo ficou maior: menu, textos, tarefas, agenda, Vida e Números.
 - Esferas: os nomes das áreas ficam do lado de fora dos círculos, com espaço, e a porcentagem dentro.
