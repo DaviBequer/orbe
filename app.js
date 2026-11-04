@@ -49,7 +49,26 @@ const DEFAULT = () => ({
 });
 let DB;
 try { DB = JSON.parse(localStorage.getItem(KEY)) || DEFAULT(); } catch (e) { DB = DEFAULT(); }
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { toast('Não consegui salvar no aparelho.'); } };
+/* Cada mudança ganha um carimbo de tempo (u) e cada exclusão vira uma marca em DB.del, para juntar celular e computador. */
+const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k']];
+const strip = (o) => { const { u, ...r } = o; return JSON.stringify(r); };
+function snapshot() { const sn = { name: DB.name }; COLS.forEach(([c, id]) => { sn[c] = {}; (DB[c] || []).forEach((x) => (sn[c][x[id]] = strip(x))); }); return sn; }
+let SNAP = snapshot();
+function stamp() {
+  const now = Date.now(); DB.del = DB.del || {};
+  COLS.forEach(([c, id]) => {
+    const cur = new Set();
+    DB[c].forEach((x) => { cur.add(x[id]); if (SNAP[c][x[id]] !== strip(x)) x.u = now; });
+    Object.keys(SNAP[c]).forEach((k) => { if (!cur.has(k)) DB.del[k] = now; });
+  });
+  if (DB.name !== SNAP.name) DB.nameU = now;
+  SNAP = snapshot();
+}
+function save() {
+  stamp();
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { toast('Não consegui salvar no aparelho.'); }
+  scheduleSync();
+}
 const area = (k) => DB.areas.find((a) => a.k === k);
 const areaName = (k) => (area(k) || { n: 'Sem área' }).n;
 const subIcon = (s) => SUBI[s] || 'label';
@@ -94,7 +113,7 @@ function home() {
   const d = new Date();
   const now = pad(d.getHours()) + ':' + pad(d.getMinutes());
   const n = td.filter((t) => t.date === t0 && t.time && t.q <= 2 && !t.done && t.time >= now).sort((a, b) => (a.time < b.time ? -1 : 1))[0];
-  let h = `<div class="hero"><div class="logo">${ic('light_mode', 18)}Orbe<button data-settings aria-label="Configurações">${ic('settings', 19)}</button></div>
+  let h = `<div class="hero"><div class="logo">${ic('light_mode', 18)}Orbe${syncIcon()}<button data-settings aria-label="Configurações">${ic('settings', 19)}</button></div>
     <h2>${greeting()}${DB.name ? ', ' + esc(DB.name) : ''}</h2><p>${WDF[d.getDay()][0].toUpperCase() + WDF[d.getDay()].slice(1)}, ${d.getDate()} de ${MOF[d.getMonth()].toLowerCase()} · ${pl(open, 'aberta', 'abertas')} hoje</p>
     <div class="pl"><span>Progresso de hoje</span><b>${done} de ${td.length}</b></div><div class="prog"><i style="width:${p}%"></i></div>
     <div class="ht">${[1, 2, 3, 4].map((q) => `<button class="q${q}${UI.qf === q ? ' on' : ''}" data-qf="${q}"><span class="tn">${mini(q)}<b>${cnt(q)}</b></span><small>${Q[q].s}</small></button>`).join('')}</div></div>`;
@@ -162,11 +181,19 @@ function visual() {
   if (!A.length) return '';
   const sh = A.map((a) => DB.tasks.filter((t) => t.a === a.k && t.date && wk.includes(t.date)).length);
   const tot = sh.reduce((x, y) => x + y, 0), pc = sh.map((x) => (tot ? Math.round((x / tot) * 100) : 0)), N = A.length;
-  const W = 280, H = 214, cx = W / 2, cy = H / 2, R0 = N === 1 ? 0 : N === 2 ? 34 : 44;
+  const W = 380, H = 320, cx = W / 2, cy = H / 2 + 4, R0 = N === 1 ? 0 : N === 2 ? 36 : 46;
+  const rad = (i) => (tot ? Math.max(30, 34 + pc[i] * 0.38) : 46);
   const pos = A.map((a, i) => { const ang = ((-150 + (i * 360) / N) * Math.PI) / 180; return [cx + R0 * Math.cos(ang), cy + R0 * Math.sin(ang), ang]; });
-  const circ = A.map((a, i) => `<circle cx="${pos[i][0]}" cy="${pos[i][1]}" r="${tot ? Math.max(26, 30 + pc[i] * 0.55) : 42}" fill="none" stroke="${a.c}" stroke-width="1.25"/>`).join('');
-  const lab = A.map((a, i) => { const [x, y, ang] = pos[i], lx = x + Math.cos(ang) * 16, ly = y + Math.sin(ang) * 16; return `<text x="${lx}" y="${ly}" text-anchor="middle" class="v">${tot ? pc[i] + '%' : '–'}</text><text x="${lx}" y="${ly + 14}" text-anchor="middle" class="l">${esc(a.n.length > 14 ? a.n.slice(0, 13) + '…' : a.n)}</text>`; }).join('');
-  return `<div class="vis"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Equilíbrio entre as áreas">${circ}${lab}</svg><p class="cap">${tot ? 'Quanto das tarefas desta semana foi para cada área' : 'Quando tiver tarefas nesta semana, aqui aparece o equilíbrio entre as áreas'}</p></div>`;
+  const circ = A.map((a, i) => `<circle cx="${pos[i][0]}" cy="${pos[i][1]}" r="${rad(i)}" fill="${a.c}" fill-opacity=".04" stroke="${a.c}" stroke-width="1.25"/>`).join('');
+  const lab = A.map((a, i) => {
+    const [x, y, ang] = pos[i], cs = Math.cos(ang), sn = Math.sin(ang), r = rad(i);
+    const px = x + cs * r * 0.32, py = y + sn * r * 0.32 + 6;
+    const d = r + 18, nx = x + cs * d, ny = y + sn * d + (sn > 0.3 ? 12 : sn < -0.3 ? -2 : 4);
+    const anchor = cs > 0.35 ? 'start' : cs < -0.35 ? 'end' : 'middle';
+    const nm = a.n.length > 16 ? a.n.slice(0, 15) + '…' : a.n;
+    return `<text x="${px}" y="${py}" text-anchor="middle" class="v">${tot ? pc[i] + '%' : '–'}</text><text x="${nx}" y="${ny}" text-anchor="${anchor}" class="l">${esc(nm)}</text>`;
+  }).join('');
+  return `<div class="vis"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Equilíbrio entre as áreas">${circ}${lab}</svg><p class="cap">${tot ? 'Quanto das tarefas desta semana foi para cada área' : 'Quando tiver tarefas nesta semana, aqui aparece o equilíbrio entre as áreas'}</p></div>`;
 }
 function areas() {
   let h = `<div class="ag-h"><b>Vida</b><span class="muted" style="font-size:12px">${pl(DB.areas.length, 'área', 'áreas')}</span></div>` + '<div class="cols vida"><div class="ca">' + visual() + '</div><div class="cb">';
@@ -388,7 +415,7 @@ function settingsSheet() {
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>Configurações<button class="rbtn" data-closeset aria-label="Fechar">${ic('close', 18)}</button></h4>
   <div class="lbl">Teu nome na saudação</div><input class="ttl" id="uname" value="${esc(DB.name)}" placeholder="Teu nome" autocomplete="off">
   <div class="set-row"><span>Tarefas guardadas</span><small>${DB.tasks.length}</small></div>
-  <div class="set-row"><span>Os dados ficam</span><small>só neste aparelho</small></div>
+  ${syncSection()}
   <div class="set-row"><span>Versão</span><small>v${self.APP_VERSION}</small></div>
   <div class="save-row"><button class="save" data-saveset>Salvar</button></div></div>`;
 }
@@ -430,6 +457,9 @@ APP.addEventListener('click', (e) => {
     askConfirm(`Excluir a área ${area(k).n}?`, 'Excluir', () => { DB.areas = DB.areas.filter((a) => a.k !== k); DB.tasks = DB.tasks.filter((t) => t.a !== k); DB.notes = DB.notes.filter((n) => n.a !== k); save(); closeSheet('area'); renderAll(); toast(used ? `Área e ${pl(used, 'tarefa excluída', 'tarefas excluídas')}.` : 'Área excluída.'); });
     return;
   }
+  if (c('[data-login]') || c('[data-signup]')) { auth(c('[data-signup]') ? 'signup' : 'login'); return; }
+  if (c('[data-logout]')) { SYNC.client.auth.signOut().then(() => { toast('Desconectado. As tarefas continuam neste aparelho.'); refreshSet(); }); return; }
+  if (c('[data-syncnow]')) { sync(true); return; }
   if (c('[data-saveset]')) { DB.name = $('#uname').value.trim(); save(); closeSheet('set'); render('home'); return; }
   // navegação
   if ((x = c('[data-go]'))) { go(x.dataset.go); return; }
@@ -523,6 +553,104 @@ APP.addEventListener('drop', (e) => {
 /* atualiza ao voltar para o app (virada do dia, contagem "em 1h20") */
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 setInterval(() => { if (!document.hidden && UI.tab === 'home') render('home'); }, 60000);
+
+/* ---------- sincronização (Supabase) ---------- */
+// Preencha com os dados do projeto (Supabase → Project Settings → API). A chave "anon public" pode ficar no app:
+// a tabela é protegida por RLS, cada pessoa só lê e grava a própria linha.
+const SUPA_URL = '';
+const SUPA_KEY = '';
+const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+const SYNC = { client: null, user: null, state: 'off', last: null, timer: null, busy: false, again: false };
+const SYNC_IC = { ok: ['cloud_done', 'Sincronizado'], sync: ['sync', 'Sincronizando…'], err: ['cloud_off', 'Não consegui sincronizar'], offline: ['cloud_off', 'Sem internet: salvo no aparelho'] };
+function syncIcon() { const v = SYNC_IC[SYNC.state]; return v ? `<span class="syncic" data-syncic title="${v[1]}">${ic(v[0], 18)}</span>` : ''; }
+function setSync(st) {
+  SYNC.state = st;
+  $$('[data-syncic]').forEach((el) => el.remove());
+  const logo = $('[data-s="home"] .logo'); const btn = logo && logo.querySelector('[data-settings]');
+  if (btn && SYNC_IC[st]) btn.insertAdjacentHTML('beforebegin', syncIcon());
+  const last = $('[data-synclast]'); if (last && SYNC.last) last.textContent = agoTxt(SYNC.last);
+}
+function agoTxt(t) { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.round(m / 60)} h`; }
+function merge(L, Rm) {
+  const out = { ...L }, del = { ...(Rm.del || {}) };
+  Object.entries(L.del || {}).forEach(([k, v]) => { if (!del[k] || del[k] < v) del[k] = v; });
+  out.del = del;
+  COLS.forEach(([c, id]) => {
+    const m = new Map(), order = [];
+    const add = (x) => { const k = x[id], prev = m.get(k); if (!prev) { order.push(k); m.set(k, x); } else if ((x.u || 0) > (prev.u || 0)) m.set(k, x); };
+    (L[c] || []).forEach(add); (Rm[c] || []).forEach(add);
+    out[c] = order.map((k) => m.get(k)).filter((x) => !(del[x[id]] && del[x[id]] >= (x.u || 0)));
+  });
+  if ((Rm.nameU || 0) > (L.nameU || 0)) { out.name = Rm.name; out.nameU = Rm.nameU; }
+  return out;
+}
+function scheduleSync() { if (!SYNC.user) return; clearTimeout(SYNC.timer); SYNC.timer = setTimeout(sync, 1200); }
+async function sync(manual) {
+  if (!SYNC.client || !SYNC.user) return;
+  if (SYNC.busy) { SYNC.again = true; return; }
+  SYNC.busy = true; setSync('sync');
+  try {
+    const { data, error } = await SYNC.client.from('orbe_data').select('data').eq('user_id', SYNC.user.id).maybeSingle();
+    if (error) throw error;
+    const remote = data && data.data, merged = remote ? merge(DB, remote) : DB;
+    if (JSON.stringify(merged) !== JSON.stringify(DB)) { DB = merged; localStorage.setItem(KEY, JSON.stringify(DB)); SNAP = snapshot(); renderAll(); }
+    if (!remote || JSON.stringify(remote) !== JSON.stringify(merged)) {
+      const { error: e2 } = await SYNC.client.from('orbe_data').upsert({ user_id: SYNC.user.id, data: merged, updated_at: new Date().toISOString() });
+      if (e2) throw e2;
+    }
+    SYNC.last = Date.now(); setSync('ok'); if (manual) toast('Sincronizado.');
+  } catch (e) {
+    console.warn('Orbe sync', e); setSync(navigator.onLine ? 'err' : 'offline');
+    if (manual) toast(navigator.onLine ? 'Não consegui sincronizar. Tente de novo.' : 'Sem internet. Salvo no aparelho.');
+  }
+  SYNC.busy = false; if (SYNC.again) { SYNC.again = false; sync(); }
+}
+function syncSection() {
+  if (!SUPA_URL || !SUPA_KEY) return '<div class="set-row"><span>Os dados ficam</span><small>só neste aparelho</small></div>';
+  if (!SYNC.client) return '<div class="set-row"><span>Sincronização</span><small>sem conexão com o servidor</small></div>';
+  if (SYNC.user) return `<div class="lbl">Sincronização</div><div class="set-row"><span>Conectado como</span><small>${esc(SYNC.user.email)}</small></div><div class="set-row"><span>Última sincronização</span><small data-synclast>${SYNC.last ? agoTxt(SYNC.last) : '–'}</small></div><div class="save-row"><button class="del" data-syncnow>${ic('sync', 18)}Sincronizar agora</button><button class="del" data-logout>${ic('logout', 18)}Sair</button></div>`;
+  return `<div class="lbl">Sincronizar celular e computador</div><p class="hint">Entre com o mesmo e-mail e senha nos dois aparelhos para ver as mesmas tarefas. O que já está aqui é mantido.</p>
+  <input class="ttl in2" id="semail" type="email" placeholder="E-mail" autocomplete="email" inputmode="email">
+  <input class="ttl in2" id="spass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password">
+  <div class="save-row"><button class="del" data-signup>Criar conta</button><button class="save" data-login>Entrar</button></div>`;
+}
+function refreshSet() { const sh = $('[data-sh="set"]'); if (!sh.classList.contains('open')) return; const n = $('#uname'); const v = n ? n.value : DB.name; sh.innerHTML = settingsSheet(); if ($('#uname')) $('#uname').value = v; }
+function authMsg(e) {
+  const m = (e && e.message) || '';
+  if (/invalid login/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/not confirmed/i.test(m)) return 'Confirme o e-mail pelo link que chegou e tente de novo.';
+  if (/already registered|already been registered/i.test(m)) return 'Já existe conta com esse e-mail. Toque em Entrar.';
+  if (/password/i.test(m) && /6/.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (/email/i.test(m) && /invalid/i.test(m)) return 'E-mail inválido.';
+  return 'Não deu certo: ' + m;
+}
+async function auth(kind) {
+  const email = ($('#semail').value || '').trim(), password = $('#spass').value || '';
+  if (!email || !password) { toast('Preencha e-mail e senha.'); return; }
+  try {
+    const fn = kind === 'signup' ? SYNC.client.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } }) : SYNC.client.auth.signInWithPassword({ email, password });
+    const { data, error } = await fn;
+    if (error) { toast(authMsg(error)); return; }
+    if (kind === 'signup' && !data.session) { toast('Conta criada. Confirme pelo link no e-mail e depois toque em Entrar.'); return; }
+    toast('Conectado. Sincronizando…');
+  } catch (e) { toast(navigator.onLine ? authMsg(e) : 'Sem internet.'); }
+}
+function initSync() {
+  if (!SUPA_URL || !SUPA_KEY || !window.supabase) return;
+  SYNC.client = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'orbe.auth' } });
+  SYNC.client.auth.onAuthStateChange((ev, session) => {
+    SYNC.user = session ? session.user : null;
+    setSync(SYNC.user ? SYNC.state === 'off' ? 'sync' : SYNC.state : 'off');
+    if (SYNC.user && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) setTimeout(sync, 0);
+    refreshSet();
+  });
+}
+if (SUPA_URL && SUPA_KEY) {
+  const sc = document.createElement('script'); sc.src = SUPA_JS; sc.async = true; sc.onload = initSync; sc.onerror = () => setSync(navigator.onLine ? 'err' : 'offline'); document.head.appendChild(sc);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+  window.addEventListener('online', () => sync());
+  setInterval(() => { if (!document.hidden) sync(); }, 60000);
+}
 
 renderAll();
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

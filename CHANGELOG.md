@@ -2,6 +2,12 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v4 — 2026-11-04
+- No computador tudo ficou maior: menu, textos, tarefas, agenda, Vida e Números.
+- Esferas: os nomes das áreas ficam do lado de fora dos círculos, com espaço, e a porcentagem dentro.
+- Sincronização com o Supabase pronta (entrar com e-mail e senha em Configurações; celular e computador
+  ficam com as mesmas tarefas). Fica ativa assim que o endereço e a chave do projeto forem colocados no app.
+
 ## v3 — 2026-11-04
 - O Orbe ganhou repositório e endereço próprios: https://davibequer.github.io/orbe/ (antes ficava dentro do Dalê Tarefas).
   As tarefas salvas no aparelho continuam lá.

@@ -16,7 +16,10 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
 - Mudar a data de uma tarefa conta como remarcada (`hist`).
 
 Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 200).
-Dados em `localStorage['orbe.v1']` (só no aparelho). O Supabase fica para depois, quando o usuário pedir.
+Dados em `localStorage['orbe.v1']`. Sincronização opcional com Supabase (fim do `app.js`: `SUPA_URL`/`SUPA_KEY`):
+login por e-mail e senha em Configurações; tabela `orbe_data(user_id, data jsonb, updated_at)` com RLS, uma linha por
+usuário com o documento inteiro. Cada item tem carimbo `u` (posto em `save()` por comparação) e exclusões ficam em
+`DB.del`; `merge()` junta item a item pelo mais recente. Biblioteca supabase-js carregada do jsDelivr só se houver chave.
 
 ## Regra de versão (obrigatória)
 Toda alteração no app: some 1 em `self.APP_VERSION` em `version.js` (número inteiro) e adicione

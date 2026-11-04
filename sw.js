@@ -37,8 +37,8 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Fontes e ícones do Google: guarda na primeira vez para funcionar sem internet.
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+  // Fontes e ícones do Google e a biblioteca do Supabase: guarda na primeira vez para funcionar sem internet.
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.hostname === 'cdn.jsdelivr.net') {
     event.respondWith((async () => {
       const cache = await caches.open(FONTS);
       const hit = await cache.match(req);

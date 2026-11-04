@@ -42,6 +42,10 @@ button{font:inherit;color:inherit}
 .hero{background:var(--dark);color:#fff;margin:0 -18px;padding:calc(var(--st) + 6px) 20px 20px;border-radius:0 0 28px 28px}
 .logo{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:400;letter-spacing:-.01em;padding:8px 0 2px}
 .logo .ms{--s:18px}
+.logo .syncic{margin-left:auto;color:rgba(255,255,255,.55);display:grid;padding:0 6px}
+.logo .syncic+button{margin-left:4px}
+.hint{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
+.ttl.in2{font-size:17px}
 .logo button{margin-left:auto;background:rgba(255,255,255,.08);border:0;color:#fff;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
 .hero h2{font-weight:200;font-size:25px;margin:12px 0 2px;letter-spacing:-.01em}
 .hero p{margin:0;color:rgba(255,255,255,.6);font-size:13px}
@@ -223,10 +227,10 @@ button{font:inherit;color:inherit}
 
 /* vida */
 .vis{background:var(--soft);border-radius:20px;margin-top:12px;padding:6px 0 12px}
-.vis svg{display:block;margin:0 auto;max-width:100%}
+.vis svg{display:block;margin:0 auto;width:100%;max-width:380px;height:auto}
 .vis text{font-family:var(--font);font-size:10.5px;fill:var(--ink)}
 .vis text.v{font-size:17px;font-weight:300}
-.vis text.l{fill:var(--muted)}
+.vis text.l{fill:var(--muted);font-size:12px}
 .vis .cap{font-size:11.5px;color:var(--muted);text-align:center;margin:0;padding:0 14px}
 .acc{margin-top:10px;background:var(--soft);border-radius:18px;overflow:hidden}
 .acc>button{width:100%;display:flex;align-items:center;gap:12px;background:none;border:0;padding:14px;cursor:pointer;color:var(--ink);text-align:left}
@@ -377,6 +381,64 @@ button{font:inherit;color:inherit}
   .sheet.full .save-row{margin-top:6px}
   .detail{left:auto;width:min(540px,100%);box-shadow:-24px 0 60px -24px rgba(0,0,0,.28);padding:28px 30px 48px}
   .toast{left:calc(50% + 118px);bottom:32px}
+
+  /* tudo um pouco maior no computador */
+  .nav{width:260px}
+  .screens{margin-left:260px}
+  .toast{left:calc(50% + 130px)}
+  .nav button{font-size:16px;padding:12px 16px}
+  .nav button .ms{--s:24px}
+  .nav .side-logo{font-size:21px}
+  .nav .side-new{font-size:15.5px;padding:14px 18px}
+  .screen{padding:34px max(44px,calc((100% - 1240px)/2)) 64px}
+  .screen[data-s="home"]{padding-top:34px}
+  .ag-h b{font-size:34px}
+  .sub-h,.sec-h small{font-size:13.5px}
+  .sec-h{font-size:19px;margin:28px 0 10px}
+  .hero h2{font-size:34px}
+  .hero p,.hero .pl{font-size:14.5px}
+  .logo{font-size:17px}
+  .tt{font-size:17px}
+  .tmeta{font-size:13px}
+  .ck{width:24px;height:24px}
+  .qgroup{padding:4px 18px;border-radius:20px}
+  .qgroup h5{font-size:13.5px}
+  .next b{font-size:16.5px}
+  .next small{font-size:11.5px}
+  .seg button{font-size:14.5px;padding:7px 16px}
+  .md{font-size:16px;max-height:60px}
+  .month .wd{font-size:12px}
+  .sp{padding:12px 14px;min-height:120px}
+  .sp h5{font-size:14px}
+  .sp p{font-size:14px}
+  .legend{font-size:12px}
+  .vis{padding:14px 10px 18px}
+  .vis svg{max-width:440px}
+  .vis text.v{font-size:19px}
+  .vis text.l{font-size:13px}
+  .vis .cap{font-size:13px}
+  .acc>button{padding:18px}
+  .acc>button div b{font-size:18px}
+  .acc>button div small,.srow div small{font-size:13px}
+  .ai2,.srow .si{width:42px;height:42px}
+  .srow div b{font-size:16.5px}
+  .newarea,.addrow{font-size:15.5px}
+  .kpi{padding:16px 18px}
+  .kpi small{font-size:13px}
+  .kpi b{font-size:42px}
+  .card{padding:18px}
+  .card h6{font-size:12px}
+  .rep,.bar-l{font-size:15px}
+  .qd b{font-size:28px}
+  .qd small{font-size:12px}
+  .ins{font-size:13.5px}
+  .dtitle h3{font-size:32px}
+  .dnote{font-size:16px}
+  .ttl{font-size:23px}
+  .dt,.chip{font-size:15px}
+  .qc b{font-size:15px}
+  .qc small{font-size:12px}
 }
+
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
