@@ -2,6 +2,12 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v7 — 2026-11-04
+- Botão voltar do Android: fecha a janela aberta, depois volta para Hoje e, em Hoje, só sai do app apertando
+  voltar duas vezes seguidas (avisa "Toque em voltar de novo para sair"). Agora funciona também logo ao abrir.
+- Ao reabrir o app (até 12 h depois), ele volta para onde estava: aba, rolagem, filtros, dia da agenda,
+  áreas abertas, parte aberta e a tarefa que estava sendo escrita.
+
 ## v6 — 2026-11-04
 - Botão de olho no campo de senha para ver o que está digitando (toque de novo para esconder).
 

@@ -290,21 +290,53 @@ function go(tab) {
   $$('.screen').forEach((s) => s.classList.toggle('on', s.dataset.s === tab));
   closeDetail();
   render(tab, false);
+  saveUI();
 }
 
 /* ---------- voltar do Android ---------- */
 const layers = [];
-let ignorePop = 0, exitArmed = 0;
+let ignorePop = 0, exitArmed = 0, guardArmed = false;
 function pushLayer(close) { layers.push(close); history.pushState({ orbe: layers.length }, ''); }
 function popLayer() { if (!layers.length) return; layers.pop(); ignorePop++; history.back(); }
+// O Chrome ignora entradas do histórico criadas sem toque do usuário; por isso a "trava" do voltar
+// é recolocada no primeiro toque depois de cada voltar.
+function pushGuard() { history.pushState({ orbe: 'guard' }, ''); }
+function armGuard() { if (!guardArmed) { guardArmed = true; pushGuard(); } }
+document.addEventListener('pointerdown', armGuard, { capture: true });
+document.addEventListener('keydown', armGuard, { capture: true });
 window.addEventListener('popstate', () => {
   if (ignorePop) { ignorePop--; return; }
-  if (layers.length) { const close = layers.pop(); close(); return; }
-  if (UI.tab !== 'home') { go('home'); history.pushState({ orbe: 0 }, ''); return; }
-  if (Date.now() - exitArmed > 2500) { exitArmed = Date.now(); toast('Toque em voltar de novo para sair'); history.pushState({ orbe: 0 }, ''); return; }
-  history.back();
+  if (Date.now() - exitArmed < 2500 && !layers.length && UI.tab === 'home') { history.back(); return; }
+  guardArmed = false;
+  if (layers.length) { const close = layers.pop(); close(); pushGuard(); return; }
+  if (UI.tab !== 'home') { go('home'); pushGuard(); return; }
+  exitArmed = Date.now(); toast('Toque em voltar de novo para sair'); pushGuard();
 });
-history.replaceState({ orbe: 'base' }, ''); history.pushState({ orbe: 0 }, '');
+history.replaceState({ orbe: 'base' }, ''); pushGuard();
+
+/* ---------- voltar de onde parou ---------- */
+// Guarda aba, rolagem, filtros, dia da agenda, parte aberta e a tarefa sendo escrita; restaura ao reabrir (até 12 h).
+const UI_KEY = 'orbe.ui';
+function saveUI() {
+  try {
+    const taskOpen = $('[data-sh="task"]').classList.contains('open');
+    if (taskOpen) readTitle();
+    const scroll = {}; $$('.screen').forEach((el) => (scroll[el.dataset.s] = el.scrollTop));
+    localStorage.setItem(UI_KEY, JSON.stringify({ at: Date.now(), tab: UI.tab, qf: UI.qf, view: UI.view, sel: UI.sel, sview: UI.sview, open: [...UI.open], det: UI.det, dtab: UI.dtab, scroll, detScroll: $('.detail').scrollTop, form: taskOpen ? UI.form : null }));
+  } catch (e) { /* ignora */ }
+}
+function restoreUI() {
+  let st; try { st = JSON.parse(localStorage.getItem(UI_KEY)); } catch (e) { return; }
+  if (!st || Date.now() - st.at > 12 * 3600000) return;
+  Object.assign(UI, { qf: st.qf || 0, view: st.view || 'semana', sel: st.sel || today(), sview: st.sview || 'semana', open: new Set(st.open || []) });
+  go(st.tab || 'home');
+  Object.keys(R).forEach((x) => render(x, false));
+  requestAnimationFrame(() => { $$('.screen').forEach((el) => { if (st.scroll && st.scroll[el.dataset.s]) el.scrollTop = st.scroll[el.dataset.s]; }); });
+  if (st.det && area(st.det[0])) { openDetail(st.det[0], st.det[1]); UI.dtab = st.dtab || 'tudo'; renderDet(false); requestAnimationFrame(() => ($('.detail').scrollTop = st.detScroll || 0)); }
+  if (st.form) openTask(st.form);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveUI(); });
+window.addEventListener('pagehide', saveUI);
 
 /* ---------- janelas ---------- */
 function openSheet(name, html) {
@@ -654,4 +686,5 @@ if (SUPA_URL && SUPA_KEY) {
 }
 
 renderAll();
+restoreUI();
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

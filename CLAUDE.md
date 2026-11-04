@@ -14,6 +14,8 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
   criar/editar áreas (nome, ícone, cor) e partes.
 - **Números:** no dia certo, remarcadas, atrasadas, tempo até fazer, gráfico de linha, matriz, as que mais voltam, por área.
 - Mudar a data de uma tarefa conta como remarcada (`hist`).
+- Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
+  toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 
 Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 200).
 Dados em `localStorage['orbe.v1']`. Sincronização opcional com Supabase (fim do `app.js`: `SUPA_URL`/`SUPA_KEY`):
