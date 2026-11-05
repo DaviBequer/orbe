@@ -2,6 +2,15 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v8 — 2026-11-05
+- Nova aba **Hábitos**, como o rastreador do bullet journal: cada hábito tem uma grade de quadradinhos da semana
+  ou do mês. **Bons** (quero fazer): toque no ✓ quando fizer, e o quadradinho fica preto. **Ruins** (quero evitar):
+  toque no × se fizer; os dias em que tu evitou ficam em petróleo.
+- Cada hábito mostra a sequência (dias seguidos ou dias sem) e a porcentagem da semana ou do mês. Dá para marcar
+  ou desmarcar dias passados tocando no quadradinho e ver semanas e meses anteriores.
+- Criar e editar hábito com nome, tipo (bom ou ruim) e ícone.
+- No Hoje aparece **Hábitos de hoje** para marcar rápido. Os hábitos também sincronizam pelo Supabase.
+
 ## v7 — 2026-11-04
 - Botão voltar do Android: fecha a janela aberta, depois volta para Hoje e, em Hoje, só sai do app apertando
   voltar duas vezes seguidas (avisa "Toque em voltar de novo para sair"). Agora funciona também logo ao abrir.

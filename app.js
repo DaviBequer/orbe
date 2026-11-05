@@ -45,12 +45,13 @@ const DEFAULT = () => ({
     { k: 'pes', n: 'Pessoal', i: 'person', c: '#0F5463', subs: ['Saúde', 'Casa', 'Finanças'] },
     { k: 'esp', n: 'Espiritual', i: 'self_improvement', c: '#7A7D82', subs: ['Leitura', 'Oração', 'Igreja'] },
   ],
-  tasks: [], notes: [],
+  tasks: [], notes: [], habits: [],
 });
 let DB;
 try { DB = JSON.parse(localStorage.getItem(KEY)) || DEFAULT(); } catch (e) { DB = DEFAULT(); }
+DB.habits = DB.habits || [];
 /* Cada mudança ganha um carimbo de tempo (u) e cada exclusão vira uma marca em DB.del, para juntar celular e computador. */
-const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k']];
+const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k'], ['habits', 'id']];
 const strip = (o) => { const { u, ...r } = o; return JSON.stringify(r); };
 function snapshot() { const sn = { name: DB.name }; COLS.forEach(([c, id]) => { sn[c] = {}; (DB[c] || []).forEach((x) => (sn[c][x[id]] = strip(x))); }); return sn; }
 let SNAP = snapshot();
@@ -75,7 +76,7 @@ const subIcon = (s) => SUBI[s] || 'label';
 
 /* ---------- estado da tela ---------- */
 const UI = {
-  tab: 'home', qf: 0, view: 'semana', sel: today(), sview: 'semana', open: new Set(), det: null, dtab: 'tudo', adding: null,
+  tab: 'home', qf: 0, hview: 'semana', hoff: 0, habForm: null, view: 'semana', sel: today(), sview: 'semana', open: new Set(), det: null, dtab: 'tudo', adding: null,
   form: null, cm: null, areaForm: null,
 };
 
@@ -135,6 +136,7 @@ function home() {
   }
   const nd = DB.tasks.filter((t) => !t.date && !t.done).sort(byQ);
   if (nd.length) h += `<div class="sec-h">Sem data<small>${nd.length}</small></div><div class="qgroup plain">${nd.map(row).join('')}</div>`;
+  h += habitsToday();
   return h + '</div></div>';
 }
 
@@ -278,8 +280,81 @@ function stats() {
   return h + '</div>';
 }
 
+/* ---------- HÁBITOS ---------- */
+const HICONS = ['water_drop', 'fitness_center', 'menu_book', 'self_improvement', 'bedtime', 'directions_run', 'restaurant', 'local_cafe', 'spa', 'volunteer_activism', 'edit_note', 'savings', 'smoke_free', 'no_drinks', 'phone_android', 'sports_esports', 'fastfood', 'music_note'];
+const hStart = (h) => (h.created || today()).slice(0, 10);
+const hMarked = (h, s) => !!(h.days && h.days[s]);
+// Bom: marcar = fiz. Ruim: marcar = caí (fiz o que queria evitar).
+function hState(h, s) {
+  const t0 = today();
+  if (s > t0) return 'fut';
+  if (s < hStart(h)) return 'off';
+  if (h.type === 'bad') return hMarked(h, s) ? 'x' : s < t0 ? 'ok' : 'wait';
+  return hMarked(h, s) ? 'ok' : s < t0 ? 'miss' : 'wait';
+}
+function hStreak(h) {
+  const t0 = today(), st = hStart(h); let n = 0, d = t0;
+  if (h.type === 'bad') { while (d >= st && !hMarked(h, d)) { n++; d = addDays(d, -1); } return n; }
+  if (!hMarked(h, d)) d = addDays(d, -1);
+  while (d >= st && hMarked(h, d)) { n++; d = addDays(d, -1); }
+  return n;
+}
+function hRange() {
+  const t0 = today();
+  if (UI.hview === 'semana') { const m = addDays(monday(t0), UI.hoff * 7); return weekOf(m); }
+  const d = parse(t0), y = d.getFullYear(), m = d.getMonth() + UI.hoff, n = new Date(y, m + 1, 0).getDate();
+  return [...Array(n)].map((_, i) => ymd(new Date(y, m, i + 1)));
+}
+function hPct(h, days) {
+  const el = days.filter((s) => s <= today() && s >= hStart(h)); if (!el.length) return null;
+  const ok = el.filter((s) => hState(h, s) === 'ok' || (h.type === 'bad' && hState(h, s) === 'wait')).length;
+  return Math.round((ok / el.length) * 100);
+}
+function hCard(h, days) {
+  const t0 = today(), bad = h.type === 'bad', on = hMarked(h, t0), st = hStreak(h), p = hPct(h, days);
+  const streak = bad ? `${pl(st, 'dia', 'dias')} sem` : st ? `${pl(st, 'dia', 'dias')} seguido${st === 1 ? '' : 's'}` : 'comece hoje';
+  const lead = UI.hview === 'mes' ? (parse(days[0]).getDay() + 6) % 7 : 0;
+  const cells = '<span class="blank"></span>'.repeat(lead) + days.map((s) => { const k = hState(h, s); return `<button class="hc ${k}${s === t0 ? ' today' : ''}" data-hday="${s}" data-hid="${h.id}"${k === 'fut' || k === 'off' ? ' disabled' : ''} aria-label="${fmtDate(s, true)}">${k === 'x' ? ic('close', 13) : parse(s).getDate()}</button>`; }).join('');
+  return `<div class="hab${bad ? ' bad' : ''}" style="--hcol:${bad ? 'var(--accent)' : 'var(--ink)'}">
+  <div class="hab-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div data-edithab="${h.id}"><b>${esc(h.n)}</b><small>${streak}${p === null ? '' : ` · ${p}% ${UI.hview === 'semana' ? 'na semana' : 'no mês'}`}</small></div>
+  <button class="htog${on ? ' on' : ''}" data-htoday="${h.id}" aria-pressed="${on}" aria-label="${bad ? 'Marcar que fiz hoje' : 'Marcar como feito hoje'}">${ic(bad ? 'close' : 'check', 18)}</button></div>
+  <div class="hgrid${UI.hview === 'mes' ? ' month' : ''}">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((x) => `<span class="wd">${x}</span>`).join('')}${cells}</div></div>`;
+}
+function habits() {
+  const days = hRange(), sem = UI.hview === 'semana', d0 = parse(days[0]), d1 = parse(days[days.length - 1]);
+  const lbl = sem ? `${d0.getDate()} ${MO[d0.getMonth()]} a ${d1.getDate()} ${MO[d1.getMonth()]}` : `${MOF[d0.getMonth()]} ${d0.getFullYear()}`;
+  let h = `<div class="ag-h"><b>Hábitos</b><div class="seg"><button data-hview="semana" class="${sem ? 'on' : ''}">Semana</button><button data-hview="mes" class="${!sem ? 'on' : ''}">Mês</button></div></div>
+  <div class="ag-nav"><p class="sub-h">${lbl}</p>${UI.hoff ? `<button data-hnav="0" aria-label="Voltar para agora">${ic('today', 18)}</button>` : ''}<button data-hnav="-1" aria-label="Anterior">${ic('chevron_left', 20)}</button><button data-hnav="1" aria-label="Próximo"${UI.hoff >= 0 ? ' disabled' : ''}>${ic('chevron_right', 20)}</button></div>`;
+  if (!DB.habits.length) return h + `<div class="empty-big">${ic('checklist')}Acompanhe o que tu quer fazer todo dia (ler, treinar, orar)<br>e o que quer evitar (celular na cama, doce).<br>Cada hábito ganha uma grade de quadradinhos.</div><button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
+  const good = DB.habits.filter((x) => x.type !== 'bad'), bad = DB.habits.filter((x) => x.type === 'bad'), t0 = today();
+  h += `<p class="hsum">${good.length ? `${good.filter((x) => hMarked(x, t0)).length} de ${good.length} bons feitos hoje` : ''}${good.length && bad.length ? ' · ' : ''}${bad.length ? `${bad.filter((x) => !hMarked(x, t0)).length} de ${bad.length} ruins evitados` : ''}</p>`;
+  if (good.length) h += `<div class="sec-h">Bons<small>quero fazer · toque no ✓ quando fizer</small></div><div class="hlist">${good.map((x) => hCard(x, days)).join('')}</div>`;
+  if (bad.length) h += `<div class="sec-h">Ruins<small>quero evitar · toque no × se fizer</small></div><div class="hlist">${bad.map((x) => hCard(x, days)).join('')}</div>`;
+  return h + `<button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
+}
+function habitsToday() {
+  if (!DB.habits.length) return '';
+  const t0 = today();
+  return `<div class="sec-h">Hábitos de hoje<small>toque para marcar</small></div><div class="hchips">${DB.habits.map((x) => { const on = hMarked(x, t0), bad = x.type === 'bad'; return `<button class="hchip${bad ? ' bad' : ''}${on ? ' on' : ''}" data-htoday="${x.id}" aria-pressed="${on}">${ic(on ? (bad ? 'close' : 'check') : x.i || 'check', 16)}${esc(x.n)}</button>`; }).join('')}</div>`;
+}
+function habSheet() {
+  const F = UI.habForm;
+  return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar hábito' : 'Novo hábito'}<button class="rbtn" data-closehab aria-label="Fechar">${ic('close', 18)}</button></h4>
+  <input class="ttl" id="hname" placeholder="Ex.: Ler 10 páginas" value="${esc(F.n)}" autocomplete="off" enterkeyhint="done">
+  <div class="lbl">Tipo</div><div class="htype"><button data-htype="good" class="${F.type !== 'bad' ? 'on' : ''}">${ic('check_circle', 20)}<b>Bom</b><small>Quero fazer</small></button><button data-htype="bad" class="${F.type === 'bad' ? 'on' : ''}">${ic('block', 20)}<b>Ruim</b><small>Quero evitar</small></button></div>
+  <div class="lbl">Ícone</div><div class="icgrid">${HICONS.map((n) => `<button data-hic="${n}" class="${F.i === n ? 'on' : ''}" aria-label="${n}">${ic(n, 22)}</button>`).join('')}</div>
+  <div class="save-row">${F.id ? `<button class="del" data-delhab>${ic('delete', 18)}</button>` : ''}<button class="save" data-savehab>${F.id ? 'Salvar' : 'Criar hábito'}</button></div></div>`;
+}
+function toggleHab(id, s) {
+  const h = DB.habits.find((x) => x.id === id); if (!h) return;
+  h.days = { ...(h.days || {}) };
+  if (h.days[s]) delete h.days[s]; else h.days[s] = 1;
+  if (navigator.vibrate) navigator.vibrate(10);
+  save(); render('habits'); render('home');
+}
+
 /* ---------- render ---------- */
-const R = { home, agenda, areas, stats };
+const R = { home, agenda, areas, habits, stats };
 function anim(el) { requestAnimationFrame(() => requestAnimationFrame(() => $$('.bar i[data-w]', el).forEach((b) => (b.style.width = b.dataset.w + '%')))); }
 function render(s, keep = true) { const el = $(`[data-s="${s}"]`); const sc = el.scrollTop; el.innerHTML = R[s](); if (keep) el.scrollTop = sc; anim(el); }
 function renderAll() { Object.keys(R).forEach((s) => render(s)); if (UI.det) renderDet(); }
@@ -322,13 +397,13 @@ function saveUI() {
     const taskOpen = $('[data-sh="task"]').classList.contains('open');
     if (taskOpen) readTitle();
     const scroll = {}; $$('.screen').forEach((el) => (scroll[el.dataset.s] = el.scrollTop));
-    localStorage.setItem(UI_KEY, JSON.stringify({ at: Date.now(), tab: UI.tab, qf: UI.qf, view: UI.view, sel: UI.sel, sview: UI.sview, open: [...UI.open], det: UI.det, dtab: UI.dtab, scroll, detScroll: $('.detail').scrollTop, form: taskOpen ? UI.form : null }));
+    localStorage.setItem(UI_KEY, JSON.stringify({ at: Date.now(), tab: UI.tab, hview: UI.hview, qf: UI.qf, view: UI.view, sel: UI.sel, sview: UI.sview, open: [...UI.open], det: UI.det, dtab: UI.dtab, scroll, detScroll: $('.detail').scrollTop, form: taskOpen ? UI.form : null }));
   } catch (e) { /* ignora */ }
 }
 function restoreUI() {
   let st; try { st = JSON.parse(localStorage.getItem(UI_KEY)); } catch (e) { return; }
   if (!st || Date.now() - st.at > 12 * 3600000) return;
-  Object.assign(UI, { qf: st.qf || 0, view: st.view || 'semana', sel: st.sel || today(), sview: st.sview || 'semana', open: new Set(st.open || []) });
+  Object.assign(UI, { hview: st.hview || 'semana', qf: st.qf || 0, view: st.view || 'semana', sel: st.sel || today(), sview: st.sview || 'semana', open: new Set(st.open || []) });
   go(st.tab || 'home');
   Object.keys(R).forEach((x) => render(x, false));
   requestAnimationFrame(() => { $$('.screen').forEach((el) => { if (st.scroll && st.scroll[el.dataset.s]) el.scrollTop = st.scroll[el.dataset.s]; }); });
@@ -538,6 +613,23 @@ APP.addEventListener('click', (e) => {
   }
   if ((x = c('[data-addp]'))) { UI.adding = x.dataset.addp; render('areas'); const i = $('#newpart'); if (i) i.focus(); return; }
   if ((x = c('[data-okp]'))) { addPart(x.dataset.okp); return; }
+  // hábitos
+  if ((x = c('[data-htoday]'))) { toggleHab(x.dataset.htoday, today()); return; }
+  if ((x = c('[data-hday]'))) { toggleHab(x.dataset.hid, x.dataset.hday); return; }
+  if ((x = c('[data-hview]'))) { UI.hview = x.dataset.hview; UI.hoff = 0; render('habits'); return; }
+  if ((x = c('[data-hnav]'))) { const k = +x.dataset.hnav; UI.hoff = k === 0 ? 0 : Math.min(0, UI.hoff + k); render('habits'); return; }
+  if (c('[data-newhab]')) { UI.habForm = { id: null, n: '', type: 'good', i: 'water_drop' }; openSheet('habit', habSheet()); setTimeout(() => $('#hname') && $('#hname').focus(), 350); return; }
+  if ((x = c('[data-edithab]'))) { const hb = DB.habits.find((y) => y.id === x.dataset.edithab); UI.habForm = { id: hb.id, n: hb.n, type: hb.type, i: hb.i }; openSheet('habit', habSheet()); return; }
+  if ((x = c('[data-htype]'))) { UI.habForm.type = x.dataset.htype; $$('[data-htype]').forEach((y) => y.classList.toggle('on', y === x)); return; }
+  if ((x = c('[data-hic]'))) { UI.habForm.i = x.dataset.hic; $$('[data-hic]').forEach((y) => y.classList.toggle('on', y === x)); return; }
+  if (c('[data-sh="habit"] .bd') || c('[data-closehab]')) { closeSheet('habit'); return; }
+  if (c('[data-savehab]')) {
+    const F = UI.habForm, n = $('#hname').value.trim(); if (!n) { toast('Dê um nome para o hábito.'); return; }
+    if (F.id) Object.assign(DB.habits.find((y) => y.id === F.id), { n, type: F.type, i: F.i });
+    else DB.habits.push({ id: uid(), n, type: F.type, i: F.i, created: new Date().toISOString(), days: {} });
+    save(); closeSheet('habit'); render('habits'); render('home'); toast(F.id ? 'Hábito atualizado.' : 'Hábito criado.'); return;
+  }
+  if (c('[data-delhab]')) { const id = UI.habForm.id; askConfirm('Excluir este hábito?', 'Excluir', () => { DB.habits = DB.habits.filter((y) => y.id !== id); save(); closeSheet('habit'); render('habits'); render('home'); toast('Hábito excluído.'); }); return; }
   if (c('[data-newarea]')) { UI.areaForm = { k: null, n: '', i: 'fitness_center', c: COLORS[(DB.areas.length + 3) % COLORS.length] }; openSheet('area', areaSheet()); return; }
   if ((x = c('[data-editarea]'))) { const a = area(x.dataset.editarea); UI.areaForm = { k: a.k, n: a.n, i: a.i, c: a.c }; openSheet('area', areaSheet()); return; }
 });
