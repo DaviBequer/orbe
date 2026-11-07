@@ -42,7 +42,7 @@ const SUBI = { Clientes: 'groups', Projetos: 'account_tree', Estudos: 'history_e
 const ICONS = ['business_center', 'person', 'wb_twilight', 'work', 'self_improvement', 'fitness_center', 'family_restroom', 'savings', 'school', 'palette', 'rocket_launch', 'volunteer_activism', 'travel_explore', 'eco', 'favorite', 'home', 'menu_book', 'church', 'sports_soccer', 'music_note'];
 const COLORS = ['#111214', '#0F5463', '#7A7D82', '#3F7F8C', '#5B5F66', '#A3A7AC'];
 const DEFAULT = () => ({
-  v: 1, name: 'Davi',
+  v: 1, name: '',
   areas: [
     { k: 'pro', n: 'Profissional', i: 'business_center', c: '#111214', subs: ['Clientes', 'Projetos', 'Estudos'] },
     { k: 'pes', n: 'Pessoal', i: 'person', c: '#0F5463', subs: ['Saúde', 'Casa', 'Finanças'] },
@@ -600,12 +600,18 @@ function areaSheet() {
   <div class="save-row">${F.k ? `<button class="del" data-delarea>${ic('remove_circle', 18)}</button>` : ''}<button class="save" data-savearea>${F.k ? 'Pronto' : 'Criar área'}</button></div></div>`;
 }
 function settingsSheet() {
+  const acc = !SUPA_URL || !SUPA_KEY ? '' : SYNC.user
+    ? `<div class="set-row acc-row"><span>${ic('account_circle', 20)}<span><small>Conta</small>${esc(SYNC.user.email)}</span></span><button class="del" data-openacc>Trocar ou sair</button></div>`
+    : `<div class="set-row acc-row"><span>${ic('account_circle', 20)}<span><small>Conta</small>Sem conta · só neste aparelho</span></span><button class="save sm" data-openacc>Entrar</button></div>`;
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>Configurações<button class="rbtn" data-closeset aria-label="Fechar">${ic('close', 18)}</button></h4>
-  <div class="lbl">Teu nome na saudação</div><input class="ttl" id="uname" value="${esc(DB.name)}" placeholder="Teu nome" autocomplete="off">
+  ${acc}
+  <div class="lbl">Teu nome na saudação${SYNC.user ? ' (desta conta)' : ''}</div><input class="ttl" id="uname" value="${esc(DB.name)}" placeholder="Teu nome" autocomplete="off">
   <div class="set-row"><span>Tarefas guardadas</span><small>${DB.tasks.length}</small></div>
-  ${syncSection()}
   <div class="set-row"><span>Versão</span><small>v${self.APP_VERSION}</small></div>
   <div class="save-row"><button class="save" data-saveset>Pronto</button></div></div>`;
+}
+function accSheet() {
+  return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${SYNC.user ? 'Tua conta' : 'Entrar'}<button class="rbtn" data-closeacc aria-label="Fechar">${ic('close', 18)}</button></h4>${syncSection()}</div>`;
 }
 
 /* ---------- cliques ---------- */
@@ -650,6 +656,8 @@ APP.addEventListener('click', (e) => {
   if (c('[data-logout]')) { saveUI(); try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { /* ignora */ } SYNC.client.auth.signOut().then(() => { toast('Saiu da conta. As tarefas dela ficam guardadas na conta.'); refreshSet(); }); return; }
   if (c('[data-clearacc]')) { askConfirm('Apagar todos os dados desta conta?', 'Apagar', clearAccount, 'Tarefas, anotações, áreas e hábitos desta conta somem aqui e nos outros aparelhos dela.'); return; }
   if (c('[data-syncnow]')) { sync(true); return; }
+  if (c('[data-openacc]')) { openSheet('acc', accSheet()); return; }
+  if (c('[data-sh="acc"] .bd') || c('[data-closeacc]')) { closeSheet('acc'); return; }
   if (c('[data-saveset]')) { DB.name = $('#uname').value.trim(); save(); closeSheet('set'); render('home'); return; }
   // navegação
   if ((x = c('[data-go]'))) { go(x.dataset.go); return; }
@@ -804,7 +812,7 @@ async function sync(manual) {
     if (error) throw error;
     if (uid !== CUR_UID) { SYNC.busy = false; return; }
     const remote = data && data.data, merged = remote ? merge(DB, remote) : DB;
-    if (JSON.stringify(merged) !== JSON.stringify(DB)) { DB = merged; localStorage.setItem(KEY, JSON.stringify(DB)); SNAP = snapshot(); renderAll(); }
+    if (JSON.stringify(merged) !== JSON.stringify(DB)) { const nm = DB.name; DB = merged; localStorage.setItem(KEY, JSON.stringify(DB)); SNAP = snapshot(); renderAll(); if (DB.name !== nm) refreshSet(true); }
     if (!remote || JSON.stringify(remote) !== JSON.stringify(merged)) {
       const { error: e2 } = await SYNC.client.from('orbe_data').upsert({ user_id: uid, data: merged, updated_at: new Date().toISOString() });
       if (e2) throw e2;
@@ -819,13 +827,17 @@ async function sync(manual) {
 function syncSection() {
   if (!SUPA_URL || !SUPA_KEY) return '<div class="set-row"><span>Os dados ficam</span><small>só neste aparelho</small></div>';
   if (!SYNC.client) return '<div class="set-row"><span>Sincronização</span><small>sem conexão com o servidor</small></div>';
-  if (SYNC.user) return `<div class="lbl">Sincronização</div><div class="set-row"><span>Conectado como</span><small>${esc(SYNC.user.email)}</small></div><div class="set-row"><span>Última sincronização</span><small data-synclast>${SYNC.last ? agoTxt(SYNC.last) : '–'}</small></div><div class="save-row"><button class="del" data-syncnow>${ic('sync', 18)}Sincronizar agora</button><button class="del" data-logout>${ic('logout', 18)}Sair</button></div><button class="linkbtn" data-clearacc>Apagar todos os dados desta conta</button>`;
-  return `<div class="lbl">Sincronizar celular e computador</div><p class="hint">Entre com o mesmo e-mail e senha nos dois aparelhos para ver as mesmas tarefas. Cada conta tem as suas tarefas, separadas.</p>
+  if (SYNC.user) return `<div class="set-row"><span>Conectado como</span><small>${esc(SYNC.user.email)}</small></div><div class="set-row"><span>Última sincronização</span><small data-synclast>${SYNC.last ? agoTxt(SYNC.last) : '–'}</small></div><div class="save-row"><button class="del" data-syncnow>${ic('sync', 18)}Sincronizar agora</button><button class="del" data-logout>${ic('logout', 18)}Sair</button></div><button class="linkbtn" data-clearacc>Apagar todos os dados desta conta</button>`;
+  return `<p class="hint">Cada conta tem as suas tarefas, áreas, hábitos e o próprio nome na saudação. Use o mesmo e-mail e senha no celular e no computador.</p>
   <input class="ttl in2" id="semail" type="email" placeholder="E-mail" autocomplete="email" inputmode="email">
   <div class="pw"><input class="ttl in2" id="spass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="Mostrar senha" aria-pressed="false">${ic('visibility', 22)}</button></div>
   <div class="save-row"><button class="del" data-signup>Criar conta</button><button class="save" data-login>Entrar</button></div>`;
 }
-function refreshSet() { const sh = $('[data-sh="set"]'); if (!sh.classList.contains('open')) return; const n = $('#uname'); const v = n ? n.value : DB.name; sh.innerHTML = settingsSheet(); if ($('#uname')) $('#uname').value = v; }
+function refreshSet(force) {
+  const acc = $('[data-sh="acc"]'); if (acc.classList.contains('open')) { acc.innerHTML = accSheet(); }
+  const sh = $('[data-sh="set"]'); if (!sh.classList.contains('open')) return;
+  const n = $('#uname'); const v = n && !force ? n.value : DB.name; sh.innerHTML = settingsSheet(); if ($('#uname')) $('#uname').value = v;
+}
 function authMsg(e) {
   const m = (e && e.message) || '';
   if (/invalid login/i.test(m)) return 'E-mail ou senha incorretos.';
@@ -877,7 +889,7 @@ async function clearAccount() {
     const { error } = await SYNC.client.from('orbe_data').upsert({ user_id: CUR_UID, data: DB, updated_at: new Date().toISOString() });
     toast(error ? 'Apaguei aqui, mas não consegui enviar. Toque em Sincronizar agora.' : 'Dados desta conta apagados.');
   } else toast('Dados apagados deste aparelho.');
-  refreshSet();
+  refreshSet(true);
 }
 function initSync() {
   if (!SUPA_URL || !SUPA_KEY || !window.supabase) return;
@@ -888,7 +900,8 @@ function initSync() {
     else if (SYNC.user && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) useAccount(SYNC.user.id, SYNC.user.email);
     setSync(SYNC.user ? SYNC.state === 'off' ? 'sync' : SYNC.state : 'off');
     if (SYNC.user && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) setTimeout(sync, 0);
-    refreshSet();
+    if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') closeSheet('acc');
+    refreshSet(ev !== 'TOKEN_REFRESHED' && ev !== 'USER_UPDATED');
   });
 }
 if (SUPA_URL && SUPA_KEY) {

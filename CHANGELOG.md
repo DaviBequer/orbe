@@ -2,6 +2,12 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v12 — 2026-11-07
+- **Nome da saudação por conta:** cada conta guarda o próprio nome. Ao trocar de conta, a saudação e o campo
+  "Teu nome" mostram o nome daquela conta (conta nova começa sem nome).
+- Entrar, trocar de conta e sair agora ficam numa **janela própria** (Configurações → Conta → Entrar / Trocar ou sair),
+  separada do nome. Assim o nome de uma conta não passa para a outra.
+
 ## v11 — 2026-11-07
 - **Contas separadas:** cada conta do Supabase tem o próprio espaço no aparelho. Ao sair, a tela fica vazia; ao
   entrar com outra conta, aparecem só as tarefas, áreas, anotações e hábitos dela.
