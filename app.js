@@ -281,56 +281,126 @@ function stats() {
 }
 
 /* ---------- HÁBITOS ---------- */
+// Grade dia × hábito (como o rastreador do bullet journal) e uma nota de 0 a 100 por hábito.
+// Cada marca guarda quando foi feita: days[data] = { at: ISO }. Marcas antigas (valor 1) contam como feitas no dia.
 const HICONS = ['water_drop', 'fitness_center', 'menu_book', 'self_improvement', 'bedtime', 'directions_run', 'restaurant', 'local_cafe', 'spa', 'volunteer_activism', 'edit_note', 'savings', 'smoke_free', 'no_drinks', 'phone_android', 'sports_esports', 'fastfood', 'music_note'];
-const hStart = (h) => (h.created || today()).slice(0, 10);
+const HGOALS = [21, 30, 66, 90];
+const HLEVELS = ['Semente', 'Broto', 'Raiz', 'Caule', 'Folhas', 'Galhos', 'Tronco', 'Copa', 'Árvore', 'Automático'];
+const ALPHA = 1 - Math.pow(0.2, 1 / 30); // suavização: 30 dias perfeitos ≈ 80% de força, 60 dias ≈ 96%
+const f1 = (n) => n.toFixed(1).replace('.', ',');
+const hStart = (h) => ymd(new Date(h.created || Date.now()));
 const hMarked = (h, s) => !!(h.days && h.days[s]);
-// Bom: marcar = fiz. Ruim: marcar = caí (fiz o que queria evitar).
+const hGoal = (h) => h.goal || 66;
+function hLag(h, s) { const v = h.days && h.days[s]; if (!v || typeof v !== 'object' || !v.at) return 0; return Math.max(0, dayDiff(s, ymd(new Date(v.at)))); }
 function hState(h, s) {
   const t0 = today();
   if (s > t0) return 'fut';
   if (s < hStart(h)) return 'off';
   if (h.type === 'bad') return hMarked(h, s) ? 'x' : s < t0 ? 'ok' : 'wait';
-  return hMarked(h, s) ? 'ok' : s < t0 ? 'miss' : 'wait';
+  return hMarked(h, s) ? (hLag(h, s) ? 'ok late' : 'ok') : s < t0 ? 'miss' : 'wait';
 }
-function hStreak(h) {
-  const t0 = today(), st = hStart(h); let n = 0, d = t0;
-  if (h.type === 'bad') { while (d >= st && !hMarked(h, d)) { n++; d = addDays(d, -1); } return n; }
-  if (!hMarked(h, d)) d = addDays(d, -1);
-  while (d >= st && hMarked(h, d)) { n++; d = addDays(d, -1); }
-  return n;
+function hScore(h) {
+  const t0 = today(), bad = h.type === 'bad', st = hStart(h);
+  const end = hMarked(h, t0) ? t0 : addDays(t0, -1);
+  const list = []; for (let d = st; d <= end; d = addDays(d, 1)) list.push(d);
+  const x = (d) => (bad ? (hMarked(h, d) ? 0 : 1) : hMarked(h, d) ? 1 : 0);
+  let cur = 0, best = 0, run = 0;
+  list.forEach((d) => { run = x(d) ? run + 1 : 0; best = Math.max(best, run); });
+  for (let i = list.length - 1; i >= 0 && x(list[i]); i--) cur++;
+  const doneDays = list.filter((d) => x(d)).length;
+  const marks = Object.keys(h.days || {}).filter((d) => d >= st && d <= t0);
+  const lags = marks.map((d) => hLag(h, d)), late = lags.filter((l) => l > 0);
+  const info = { n: list.length, cur, best, doneDays, late: late.length, avgLag: late.length ? late.reduce((a, c) => a + c, 0) / late.length : 0, formation: Math.min(1, list.length / 66) };
+  if (!list.length) return { score: null, parts: [], info };
+  // 1. Força: média com mais peso nos dias recentes (suavização exponencial)
+  let f = 0; list.forEach((d) => { f += ALPHA * (x(d) - f); });
+  // 2. Últimos 14 dias
+  const last = list.slice(-14), recent = last.filter((d) => x(d)).length / last.length;
+  // 3. Pontualidade: marcar no mesmo dia vale tudo; 1 dia depois 60%; 2 dias 30%; 3 ou mais 10%
+  const lw = (l) => (l <= 0 ? 1 : l === 1 ? 0.6 : l === 2 ? 0.3 : 0.1);
+  const recentMarks = marks.filter((d) => d >= addDays(t0, -30));
+  const punct = recentMarks.length ? recentMarks.reduce((a, d) => a + lw(hLag(h, d)), 0) / recentMarks.length : 0;
+  // 4. Meta: dias feitos (bom) ou sequência atual sem cair (ruim) em relação à meta
+  const meta = Math.min(1, (bad ? cur : doneDays) / hGoal(h));
+  // 5. Recuperação: depois de falhar, voltou no dia seguinte?
+  let falls = 0, back = 0; list.forEach((d, i) => { if (!x(d) && i < list.length - 1) { falls++; if (x(list[i + 1])) back++; } });
+  const recov = falls ? back / falls : list.length > 1 ? 1 : 0.5;
+  // 6. Horário regular (só bons, marcados no mesmo dia)
+  let reg = 0.5;
+  if (!bad) {
+    const hrs = recentMarks.filter((d) => hLag(h, d) === 0 && h.days[d] && h.days[d].at).map((d) => { const t = new Date(h.days[d].at); return t.getHours() + t.getMinutes() / 60; });
+    if (hrs.length >= 3) { const m = hrs.reduce((a, c) => a + c, 0) / hrs.length, sd = Math.sqrt(hrs.reduce((a, c) => a + (c - m) ** 2, 0) / hrs.length); reg = Math.max(0, Math.min(1, 1 - (sd - 1) / 3)); }
+  }
+  const parts = bad
+    ? [['forca', 'Força do hábito', 40, f], ['recente', 'Dias limpos (últimos 14)', 25, recent], ['meta', `Sequência sem cair × meta de ${hGoal(h)}`, 20, meta], ['recup', 'Recuperação depois de cair', 15, recov]]
+    : [['forca', 'Força do hábito', 35, f], ['recente', 'Constância (últimos 14 dias)', 20, recent], ['pontual', 'Marcou no mesmo dia', 15, punct], ['meta', `Progresso na meta de ${hGoal(h)} dias`, 15, meta], ['recup', 'Voltou no dia seguinte a uma falha', 10, recov], ['horario', 'Horário regular', 5, reg]];
+  const score = parts.reduce((a, p) => a + p[2] * p[3], 0);
+  return { score, parts, info };
 }
+const TIPS = {
+  forca: 'Repetir todo dia é o que mais pesa. A força sobe rápido no começo e devagar depois.',
+  recente: 'Os últimos 14 dias contam muito: emende mais dias seguidos.',
+  pontual: 'Marque no mesmo dia em que fez. Marcar depois vale menos.',
+  meta: '', recup: 'Depois de uma falha, volte no dia seguinte. Nunca falhe dois dias seguidos.',
+  horario: 'Fazer sempre no mesmo horário ajuda o hábito a ficar automático.',
+};
 function hRange() {
   const t0 = today();
-  if (UI.hview === 'semana') { const m = addDays(monday(t0), UI.hoff * 7); return weekOf(m); }
+  if (UI.hview === 'semana') return weekOf(addDays(monday(t0), UI.hoff * 7));
   const d = parse(t0), y = d.getFullYear(), m = d.getMonth() + UI.hoff, n = new Date(y, m + 1, 0).getDate();
   return [...Array(n)].map((_, i) => ymd(new Date(y, m, i + 1)));
 }
-function hPct(h, days) {
-  const el = days.filter((s) => s <= today() && s >= hStart(h)); if (!el.length) return null;
-  const ok = el.filter((s) => hState(h, s) === 'ok' || (h.type === 'bad' && hState(h, s) === 'wait')).length;
-  return Math.round((ok / el.length) * 100);
+function hMatrix(days) {
+  const t0 = today(), wd = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  const head = `<tr><th class="hn"></th>${days.map((s) => `<th class="${s === t0 ? 't' : ''}"><span>${wd[parse(s).getDay()]}</span>${parse(s).getDate()}</th>`).join('')}</tr>`;
+  const rowH = (h) => {
+    const sc = hScore(h).score;
+    return `<tr class="${h.type === 'bad' ? 'bad' : ''}"><th class="hn" data-edithab="${h.id}"><span class="hi">${ic(h.i || 'check', 17)}</span><span class="nm">${esc(h.n)}<small>${sc === null ? 'novo' : f1(sc)}</small></span></th>${days.map((s) => {
+      const k = hState(h, s), off = k === 'fut' || k === 'off';
+      const inner = k === 'x' ? ic('close', 15) : k.startsWith('ok') && h.type !== 'bad' ? ic('check', 15) : k === 'ok' ? '' : '';
+      return `<td><button class="hcell ${k}${s === t0 ? ' today' : ''}" data-hday="${s}" data-hid="${h.id}"${off ? ' disabled' : ''} aria-label="${esc(h.n)}, ${fmtDate(s, true)}">${inner}</button></td>`;
+    }).join('')}</tr>`;
+  };
+  const good = DB.habits.filter((x) => x.type !== 'bad'), bad = DB.habits.filter((x) => x.type === 'bad');
+  const grp = (l, t) => (l.length ? `<tr class="grp"><th class="hn" colspan="${days.length + 1}"><span>${t}</span></th></tr>${l.map(rowH).join('')}` : '');
+  return `<div class="hmx-wrap${UI.hview === 'mes' ? ' month' : ''}"><table class="hmx"><thead>${head}</thead><tbody>${grp(good, 'Bons · quero fazer')}${grp(bad, 'Ruins · quero evitar (× = fiz)')}</tbody></table></div>
+  <div class="legend hleg"><span><i class="lg ok"></i>feito no dia</span><span><i class="lg ok late"></i>marcado depois</span><span><i class="lg okb"></i>evitado</span><span><i class="lg x"></i>caí</span></div>`;
 }
-function hCard(h, days) {
-  const t0 = today(), bad = h.type === 'bad', on = hMarked(h, t0), st = hStreak(h), p = hPct(h, days);
-  const streak = bad ? `${pl(st, 'dia', 'dias')} sem` : st ? `${pl(st, 'dia', 'dias')} seguido${st === 1 ? '' : 's'}` : 'comece hoje';
-  const lead = UI.hview === 'mes' ? (parse(days[0]).getDay() + 6) % 7 : 0;
-  const cells = '<span class="blank"></span>'.repeat(lead) + days.map((s) => { const k = hState(h, s); return `<button class="hc ${k}${s === t0 ? ' today' : ''}" data-hday="${s}" data-hid="${h.id}"${k === 'fut' || k === 'off' ? ' disabled' : ''} aria-label="${fmtDate(s, true)}">${k === 'x' ? ic('close', 13) : parse(s).getDate()}</button>`; }).join('');
-  return `<div class="hab${bad ? ' bad' : ''}" style="--hcol:${bad ? 'var(--accent)' : 'var(--ink)'}">
-  <div class="hab-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div data-edithab="${h.id}"><b>${esc(h.n)}</b><small>${streak}${p === null ? '' : ` · ${p}% ${UI.hview === 'semana' ? 'na semana' : 'no mês'}`}</small></div>
-  <button class="htog${on ? ' on' : ''}" data-htoday="${h.id}" aria-pressed="${on}" aria-label="${bad ? 'Marcar que fiz hoje' : 'Marcar como feito hoje'}">${ic(bad ? 'close' : 'check', 18)}</button></div>
-  <div class="hgrid${UI.hview === 'mes' ? ' month' : ''}">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((x) => `<span class="wd">${x}</span>`).join('')}${cells}</div></div>`;
+function hAnalysis(h) {
+  const r = hScore(h), bad = h.type === 'bad', i = r.info;
+  if (r.score === null) return `<div class="hcard"><div class="hcard-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div><b>${esc(h.n)}</b><small>${bad ? 'Ruim' : 'Bom'} · meta de ${hGoal(h)} dias</small></div></div><p class="empty">A nota aparece a partir de amanhã.</p></div>`;
+  const lv = Math.min(9, Math.floor(r.score / 10));
+  const gap = r.parts.map((p) => [p[0], p[2] * (1 - p[3])]).sort((a, c) => c[1] - a[1])[0];
+  const left = Math.max(0, hGoal(h) - (bad ? i.cur : i.doneDays));
+  const tip = gap && gap[1] > 0.5 ? (gap[0] === 'meta' ? `Faltam ${pl(left, 'dia', 'dias')} para a meta de ${hGoal(h)}.` : TIPS[gap[0]]) : 'Tudo em dia. Continue assim.';
+  return `<div class="hcard${bad ? ' bad' : ''}">
+  <div class="hcard-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div data-edithab="${h.id}"><b>${esc(h.n)}</b><small>${bad ? 'Ruim · quero evitar' : 'Bom · quero fazer'} · meta de ${hGoal(h)} dias</small></div></div>
+  <div class="hscore"><b>${f1(r.score)}</b><div><span>${HLEVELS[lv]}</span><small>nível ${lv + 1} de 10</small></div></div>
+  <div class="hbar"><i style="width:${r.score}%"></i>${[10, 20, 30, 40, 50, 60, 70, 80, 90].map((v) => `<em style="left:${v}%"></em>`).join('')}</div>
+  <div class="hparts">${r.parts.map((p) => `<div><div class="bar-l"><span>${p[1]}</span><b>${f1(p[2] * p[3])} / ${p[2]}</b></div><div class="bar"><i data-w="${Math.round(p[3] * 100)}"></i></div></div>`).join('')}</div>
+  <div class="hstats"><span><b>${i.cur}</b>${bad ? 'dias sem cair' : 'seguidos agora'}</span><span><b>${i.best}</b>melhor sequência</span><span><b>${bad ? i.n - i.doneDays : i.doneDays}</b>${bad ? 'vezes que caí' : 'dias feitos'}</span>${bad ? '' : `<span><b>${i.late}</b>marcados depois${i.late ? ` · atraso médio ${f1(i.avgLag)} dia${i.avgLag >= 2 ? 's' : ''}` : ''}</span>`}</div>
+  <p class="ins">Dia ${i.n} de formação${i.n < 66 ? ` · a pesquisa mostra que um hábito leva em média 66 dias para ficar automático` : ' · já passou da média de 66 dias para ficar automático'}.</p>
+  <p class="htip">${ic('trending_up', 16)}<span><b>Para subir:</b> ${tip}</span></p></div>`;
 }
 function habits() {
   const days = hRange(), sem = UI.hview === 'semana', d0 = parse(days[0]), d1 = parse(days[days.length - 1]);
   const lbl = sem ? `${d0.getDate()} ${MO[d0.getMonth()]} a ${d1.getDate()} ${MO[d1.getMonth()]}` : `${MOF[d0.getMonth()]} ${d0.getFullYear()}`;
   let h = `<div class="ag-h"><b>Hábitos</b><div class="seg"><button data-hview="semana" class="${sem ? 'on' : ''}">Semana</button><button data-hview="mes" class="${!sem ? 'on' : ''}">Mês</button></div></div>
   <div class="ag-nav"><p class="sub-h">${lbl}</p>${UI.hoff ? `<button data-hnav="0" aria-label="Voltar para agora">${ic('today', 18)}</button>` : ''}<button data-hnav="-1" aria-label="Anterior">${ic('chevron_left', 20)}</button><button data-hnav="1" aria-label="Próximo"${UI.hoff >= 0 ? ' disabled' : ''}>${ic('chevron_right', 20)}</button></div>`;
-  if (!DB.habits.length) return h + `<div class="empty-big">${ic('checklist')}Acompanhe o que tu quer fazer todo dia (ler, treinar, orar)<br>e o que quer evitar (celular na cama, doce).<br>Cada hábito ganha uma grade de quadradinhos.</div><button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
+  if (!DB.habits.length) return h + `<div class="empty-big">${ic('checklist')}Acompanhe o que tu quer fazer todo dia (ler, treinar, orar)<br>e o que quer evitar (celular na cama, doce).<br>Cada hábito ganha uma linha na grade e uma nota de 0 a 100.</div><button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
   const good = DB.habits.filter((x) => x.type !== 'bad'), bad = DB.habits.filter((x) => x.type === 'bad'), t0 = today();
   h += `<p class="hsum">${good.length ? `${good.filter((x) => hMarked(x, t0)).length} de ${good.length} bons feitos hoje` : ''}${good.length && bad.length ? ' · ' : ''}${bad.length ? `${bad.filter((x) => !hMarked(x, t0)).length} de ${bad.length} ruins evitados` : ''}</p>`;
-  if (good.length) h += `<div class="sec-h">Bons<small>quero fazer · toque no ✓ quando fizer</small></div><div class="hlist">${good.map((x) => hCard(x, days)).join('')}</div>`;
-  if (bad.length) h += `<div class="sec-h">Ruins<small>quero evitar · toque no × se fizer</small></div><div class="hlist">${bad.map((x) => hCard(x, days)).join('')}</div>`;
-  return h + `<button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
+  h += hMatrix(days) + `<button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
+  h += `<div class="sec-h">Análise de cada hábito<small>nota de 0 a 100</small></div><div class="hlist">${DB.habits.map(hAnalysis).join('')}</div>`;
+  h += `<details class="hhow"><summary>${ic('info', 18)}Como a nota é calculada</summary><div>
+  <p><b>Força do hábito</b> (até 35 pontos; 40 nos ruins): uma média que dá mais peso aos dias recentes. Com todos os dias feitos, chega a cerca de 80% em um mês e 96% em dois. Uma falha isolada pesa pouco; falhas frequentes derrubam.</p>
+  <p><b>Constância dos últimos 14 dias</b> (20; 25 nos ruins): quantos dos últimos 14 dias tu fez (ou evitou).</p>
+  <p><b>Marcou no mesmo dia</b> (15, só nos bons): marcar no dia vale 100%; no dia seguinte, 60%; dois dias depois, 30%; três ou mais, 10%. Registro feito na hora é mais confiável do que de memória.</p>
+  <p><b>Meta</b> (15; 20 nos ruins): dias feitos em relação à meta do hábito. Nos ruins, é a sequência atual sem cair.</p>
+  <p><b>Recuperação</b> (10; 15 nos ruins): quantas vezes, depois de falhar, tu voltou já no dia seguinte.</p>
+  <p><b>Horário regular</b> (5, só nos bons): fazer mais ou menos na mesma hora todo dia.</p>
+  <p>Os níveis vão de 1 (Semente, 0 a 9,9) a 10 (Automático, 90 a 100), a cada 10 pontos. O dia de hoje só entra na conta depois de marcado.</p></div></details>`;
+  return h;
 }
 function habitsToday() {
   if (!DB.habits.length) return '';
@@ -342,21 +412,24 @@ function habSheet() {
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar hábito' : 'Novo hábito'}<button class="rbtn" data-closehab aria-label="Fechar">${ic('close', 18)}</button></h4>
   <input class="ttl" id="hname" placeholder="Ex.: Ler 10 páginas" value="${esc(F.n)}" autocomplete="off" enterkeyhint="done">
   <div class="lbl">Tipo</div><div class="htype"><button data-htype="good" class="${F.type !== 'bad' ? 'on' : ''}">${ic('check_circle', 20)}<b>Bom</b><small>Quero fazer</small></button><button data-htype="bad" class="${F.type === 'bad' ? 'on' : ''}">${ic('block', 20)}<b>Ruim</b><small>Quero evitar</small></button></div>
+  <div class="lbl">Meta em dias</div><div class="hgoal">${HGOALS.map((g) => `<button class="chip${F.goal === g ? ' on' : ''}" data-hgoal="${g}">${g}</button>`).join('')}<div class="step"><button data-hstep="-1" aria-label="Menos um dia">${ic('remove', 18)}</button><b id="hgoalv">${F.goal}</b><button data-hstep="1" aria-label="Mais um dia">${ic('add', 18)}</button></div></div>
   <div class="lbl">Ícone</div><div class="icgrid">${HICONS.map((n) => `<button data-hic="${n}" class="${F.i === n ? 'on' : ''}" aria-label="${n}">${ic(n, 22)}</button>`).join('')}</div>
   <div class="save-row">${F.id ? `<button class="del" data-delhab>${ic('delete', 18)}</button>` : ''}<button class="save" data-savehab>${F.id ? 'Salvar' : 'Criar hábito'}</button></div></div>`;
 }
 function toggleHab(id, s) {
   const h = DB.habits.find((x) => x.id === id); if (!h) return;
   h.days = { ...(h.days || {}) };
-  if (h.days[s]) delete h.days[s]; else h.days[s] = 1;
+  if (h.days[s]) delete h.days[s]; else h.days[s] = { at: new Date().toISOString() };
   if (navigator.vibrate) navigator.vibrate(10);
-  save(); render('habits'); render('home');
+  if (s !== today() && h.days[s] && h.type !== 'bad') toast('Marcado depois: conta menos na nota do que marcar no dia.');
+  UI.hkeep = true; save(); render('habits'); render('home');
 }
 
 /* ---------- render ---------- */
 const R = { home, agenda, areas, habits, stats };
 function anim(el) { requestAnimationFrame(() => requestAnimationFrame(() => $$('.bar i[data-w]', el).forEach((b) => (b.style.width = b.dataset.w + '%')))); }
-function render(s, keep = true) { const el = $(`[data-s="${s}"]`); const sc = el.scrollTop; el.innerHTML = R[s](); if (keep) el.scrollTop = sc; anim(el); }
+function render(s, keep = true) {
+  if (s === 'habits') { const w0 = $('.hmx-wrap'); const sl = w0 ? w0.scrollLeft : null, keepX = UI.hkeep; UI.hkeep = false; setTimeout(() => { const w = $('.hmx-wrap.month'); if (!w) return; if (keepX && sl !== null) { w.scrollLeft = sl; return; } const t = w.querySelector('th.t'); if (t) w.scrollLeft = t.offsetLeft - w.clientWidth / 2; }, 0); } const el = $(`[data-s="${s}"]`); const sc = el.scrollTop; el.innerHTML = R[s](); if (keep) el.scrollTop = sc; anim(el); }
 function renderAll() { Object.keys(R).forEach((s) => render(s)); if (UI.det) renderDet(); }
 function renderDet(keep = true) { const el = $('.detail'); const sc = el.scrollTop; el.innerHTML = detail(); if (keep) el.scrollTop = sc; }
 function go(tab) {
@@ -618,15 +691,17 @@ APP.addEventListener('click', (e) => {
   if ((x = c('[data-hday]'))) { toggleHab(x.dataset.hid, x.dataset.hday); return; }
   if ((x = c('[data-hview]'))) { UI.hview = x.dataset.hview; UI.hoff = 0; render('habits'); return; }
   if ((x = c('[data-hnav]'))) { const k = +x.dataset.hnav; UI.hoff = k === 0 ? 0 : Math.min(0, UI.hoff + k); render('habits'); return; }
-  if (c('[data-newhab]')) { UI.habForm = { id: null, n: '', type: 'good', i: 'water_drop' }; openSheet('habit', habSheet()); setTimeout(() => $('#hname') && $('#hname').focus(), 350); return; }
-  if ((x = c('[data-edithab]'))) { const hb = DB.habits.find((y) => y.id === x.dataset.edithab); UI.habForm = { id: hb.id, n: hb.n, type: hb.type, i: hb.i }; openSheet('habit', habSheet()); return; }
+  if (c('[data-newhab]')) { UI.habForm = { id: null, n: '', type: 'good', i: 'water_drop', goal: 66 }; openSheet('habit', habSheet()); setTimeout(() => $('#hname') && $('#hname').focus(), 350); return; }
+  if ((x = c('[data-edithab]'))) { const hb = DB.habits.find((y) => y.id === x.dataset.edithab); UI.habForm = { id: hb.id, n: hb.n, type: hb.type, i: hb.i, goal: hGoal(hb) }; openSheet('habit', habSheet()); return; }
   if ((x = c('[data-htype]'))) { UI.habForm.type = x.dataset.htype; $$('[data-htype]').forEach((y) => y.classList.toggle('on', y === x)); return; }
+  if ((x = c('[data-hgoal]'))) { UI.habForm.goal = +x.dataset.hgoal; $('#hgoalv').textContent = UI.habForm.goal; $$('[data-hgoal]').forEach((y) => y.classList.toggle('on', y === x)); return; }
+  if ((x = c('[data-hstep]'))) { UI.habForm.goal = Math.max(1, Math.min(365, UI.habForm.goal + +x.dataset.hstep)); $('#hgoalv').textContent = UI.habForm.goal; $$('[data-hgoal]').forEach((y) => y.classList.toggle('on', +y.dataset.hgoal === UI.habForm.goal)); return; }
   if ((x = c('[data-hic]'))) { UI.habForm.i = x.dataset.hic; $$('[data-hic]').forEach((y) => y.classList.toggle('on', y === x)); return; }
   if (c('[data-sh="habit"] .bd') || c('[data-closehab]')) { closeSheet('habit'); return; }
   if (c('[data-savehab]')) {
     const F = UI.habForm, n = $('#hname').value.trim(); if (!n) { toast('Dê um nome para o hábito.'); return; }
-    if (F.id) Object.assign(DB.habits.find((y) => y.id === F.id), { n, type: F.type, i: F.i });
-    else DB.habits.push({ id: uid(), n, type: F.type, i: F.i, created: new Date().toISOString(), days: {} });
+    if (F.id) Object.assign(DB.habits.find((y) => y.id === F.id), { n, type: F.type, i: F.i, goal: F.goal });
+    else DB.habits.push({ id: uid(), n, type: F.type, i: F.i, goal: F.goal, created: new Date().toISOString(), days: {} });
     save(); closeSheet('habit'); render('habits'); render('home'); toast(F.id ? 'Hábito atualizado.' : 'Hábito criado.'); return;
   }
   if (c('[data-delhab]')) { const id = UI.habForm.id; askConfirm('Excluir este hábito?', 'Excluir', () => { DB.habits = DB.habits.filter((y) => y.id !== id); save(); closeSheet('habit'); render('habits'); render('home'); toast('Hábito excluído.'); }); return; }

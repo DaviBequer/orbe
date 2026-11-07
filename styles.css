@@ -367,6 +367,75 @@ button{font:inherit;color:inherit}
 .htype button.on{background:var(--bg);border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .ag-nav button[disabled]{opacity:.35;cursor:default}
 
+/* grade dia × hábito */
+.hmx-wrap{margin:12px -18px 0;padding:0 18px 4px;overflow-x:auto;scrollbar-width:thin}
+.hmx{border-collapse:separate;border-spacing:3px;min-width:100%}
+.hmx th,.hmx td{padding:0;text-align:center}
+.hmx thead th{font-size:10.5px;font-weight:400;color:var(--muted);line-height:1.15;padding-bottom:3px}
+.hmx thead th span{display:block;font-size:9.5px;text-transform:uppercase;opacity:.8}
+.hmx thead th.t{color:var(--ink);font-weight:600}
+.hmx tr.grp .hn span{position:sticky;left:0}
+.hmx .hn{position:sticky;left:0;z-index:1;background:var(--bg);text-align:left;min-width:104px;max-width:150px;padding-right:6px;cursor:pointer}
+.hmx tbody .hn{display:flex;align-items:center;gap:8px;min-height:38px;padding:2px 6px 2px 0}
+.hmx .hn .hi{width:28px;height:28px;border-radius:9px;background:var(--soft);display:grid;place-items:center;flex:none}
+.hmx .hn .nm{font-size:13px;font-weight:400;line-height:1.15;min-width:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hmx .hn .nm small{-webkit-line-clamp:1}
+.hmx .hn .nm small{display:block;font-size:10.5px;color:var(--accent);font-family:var(--mono)}
+.hmx tr.grp .hn{display:table-cell;position:static;background:none;height:auto;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:12px 0 2px;cursor:default;font-weight:400}
+.hcell{width:min(38px,calc((100vw - 160px) / 7));height:min(38px,calc((100vw - 160px) / 7));border:0;border-radius:9px;background:#E8EAEC;display:grid;place-items:center;cursor:pointer;color:#fff;padding:0;transition:background .2s,transform .12s;position:relative}
+.hmx-wrap.month .hcell{width:30px;height:30px;border-radius:7px}
+.hcell:active{transform:scale(.9)}
+.hcell .ms{--s:15px}
+.hcell.ok{background:var(--ink)}
+.hcell.ok.late{background:#6C7076}
+.hcell.ok.late::after{content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:#fff;opacity:.8}
+.bad .hcell.ok{background:var(--accent)}
+.hcell.x{background:var(--bg);color:var(--ink);box-shadow:inset 0 0 0 1.25px var(--ink)}
+.hcell.miss{background:#E8EAEC}
+.hcell.wait{background:var(--bg);box-shadow:inset 0 0 0 1px var(--line2)}
+.hcell.fut,.hcell.off{background:transparent;box-shadow:inset 0 0 0 1px var(--line);cursor:default}
+.hcell.today{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.hcell.ok.today{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+.hleg{margin-top:8px}
+.hleg span{display:inline-flex;align-items:center;gap:5px}
+.lg{width:11px;height:11px;border-radius:3px;display:inline-block;background:var(--ink)}
+.lg.ok.late{background:#6C7076}
+.lg.okb{background:var(--accent)}
+.lg.x{background:var(--bg);box-shadow:inset 0 0 0 1.25px var(--ink)}
+.hcard{background:var(--soft);border-radius:18px;padding:16px;animation:fadeUp .35s ease both}
+.hcard-h{display:flex;align-items:center;gap:12px}
+.hcard-h .hi{width:38px;height:38px;border-radius:12px;background:var(--bg);display:grid;place-items:center;flex:none}
+.hcard-h div{flex:1;min-width:0;cursor:pointer}
+.hcard-h b{display:block;font-weight:400;font-size:16px}
+.hcard-h small{font-size:12px;color:var(--muted)}
+.hscore{display:flex;align-items:flex-end;gap:12px;margin-top:12px}
+.hscore>b{font-weight:200;font-size:48px;line-height:.9;letter-spacing:-.03em}
+.hscore span{display:block;font-size:15px;font-weight:400}
+.hscore small{font-size:12px;color:var(--muted)}
+.hbar{position:relative;height:8px;background:#E1E3E6;border-radius:4px;margin-top:12px;overflow:hidden}
+.hbar i{position:absolute;inset:0 auto 0 0;background:var(--ink);border-radius:4px}
+.bad .hbar i{background:var(--accent)}
+.hbar em{position:absolute;top:0;bottom:0;width:2px;background:var(--soft)}
+.hparts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.hparts .bar-l{font-size:12.5px}
+.hparts .bar-l b{font-size:11.5px}
+.bad .hparts .bar i{background:var(--accent)}
+.hstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px}
+.hstats span{background:var(--bg);border-radius:12px;padding:8px 10px;font-size:11.5px;color:var(--muted);line-height:1.3}
+.hstats b{display:block;font-weight:300;font-size:22px;color:var(--ink)}
+.htip{display:flex;gap:8px;align-items:flex-start;margin:10px 0 0;font-size:13px;line-height:1.45;background:var(--bg);border-radius:12px;padding:10px 12px}
+.htip .ms{color:var(--accent);margin-top:1px}
+.htip b{font-weight:500}
+.hhow{margin-top:16px;background:var(--soft);border-radius:16px;padding:12px 14px;font-size:13px;line-height:1.5}
+.hhow summary{cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;list-style:none}
+.hhow summary::-webkit-details-marker{display:none}
+.hhow p{margin:8px 0 0;color:var(--muted)}
+.hhow p b{color:var(--ink)}
+.hgoal{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.step{display:flex;align-items:center;gap:6px;margin-left:auto;background:var(--soft);border-radius:99px;padding:3px}
+.step button{width:34px;height:34px;border:0;border-radius:50%;background:var(--bg);display:grid;place-items:center;cursor:pointer}
+.step b{min-width:34px;text-align:center;font-weight:400;font-size:16px}
+
 /* ---------- base das colunas (celular: tudo empilhado) ---------- */
 .nav .side-logo,.nav .side-new{display:none}
 .d-only{display:none!important}
@@ -425,7 +494,13 @@ button{font:inherit;color:inherit}
   .toast{left:calc(50% + 118px);bottom:32px}
 
   /* tudo um pouco maior no computador */
-  .hlist{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hlist{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .hmx-wrap{margin:14px 0 0;padding:0 0 6px}
+  .hmx .hn{min-width:170px;max-width:220px}
+  .hmx .hn .nm{font-size:15px}
+  .hcell{width:44px;height:44px}
+  .hmx-wrap.month .hcell{width:32px;height:32px}
+  .hscore>b{font-size:56px}
   .hab-h div b{font-size:17px}
   .hab-h div small{font-size:13px}
   .hc{font-size:12.5px}

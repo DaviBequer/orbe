@@ -12,8 +12,10 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
 - **Agenda:** Semana/Mês, hoje em preto na página da semana; no computador arrasta tarefa para outro dia.
 - **Vida:** esferas (equilíbrio da semana por área), áreas que abrem/fecham, partes com tarefas e anotações,
   criar/editar áreas (nome, ícone, cor) e partes.
-- **Hábitos:** rastreador estilo bullet journal; `DB.habits` (`type` good/bad, `days` {data: 1}). Bom: marca = fez;
-  ruim: marca = caiu (dias sem marca contam como evitados). Grade semana/mês, sequência e %; "Hábitos de hoje" no Hoje.
+- **Hábitos:** grade dia × hábito (semana/mês); `DB.habits` (`type` good/bad, `goal` dias, `days` {data: {at: ISO de quando marcou}};
+  valor antigo `1` = marcado no dia). Bom: marca = fez; ruim: marca = caiu (dias sem marca = evitados). `hScore()` dá nota
+  0–100 por critérios ponderados (força por suavização exponencial, 14 dias, pontualidade do registro, meta, recuperação,
+  horário) e 10 níveis; "Hábitos de hoje" no Hoje.
 - **Números:** no dia certo, remarcadas, atrasadas, tempo até fazer, gráfico de linha, matriz, as que mais voltam, por área.
 - Mudar a data de uma tarefa conta como remarcada (`hist`).
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro

@@ -2,6 +2,18 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v9 — 2026-11-07
+- Hábitos em **grade dia × hábito** (como o rastreador do bullet journal): cada linha é um hábito, cada coluna um dia,
+  na semana ou no mês inteiro (rola para o lado e abre no dia de hoje). Toque no quadradinho para marcar.
+- Cada marca guarda **quando** foi feita. Marcar um dia depois aparece em cinza com um pontinho ("marcado depois")
+  e conta menos na nota.
+- Cada hábito tem uma **meta em dias** (21, 30, 66, 90 ou qualquer número).
+- **Análise de cada hábito** com nota de 0 a 100 e 10 níveis (Semente → Automático), somando critérios:
+  força do hábito (média que pesa mais os dias recentes), constância dos últimos 14 dias, marcou no mesmo dia,
+  progresso na meta, recuperação depois de uma falha e horário regular. Mostra sequência atual, melhor sequência,
+  dias feitos, quantos foram marcados depois e o atraso médio, o dia de formação (referência de 66 dias) e uma
+  dica do que mais faz a nota subir. "Como a nota é calculada" explica tudo.
+
 ## v8 — 2026-11-05
 - Nova aba **Hábitos**, como o rastreador do bullet journal: cada hábito tem uma grade de quadradinhos da semana
   ou do mês. **Bons** (quero fazer): toque no ✓ quando fizer, e o quadradinho fica preto. **Ruins** (quero evitar):
