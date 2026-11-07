@@ -2,6 +2,13 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v11 — 2026-11-07
+- **Contas separadas:** cada conta do Supabase tem o próprio espaço no aparelho. Ao sair, a tela fica vazia; ao
+  entrar com outra conta, aparecem só as tarefas, áreas, anotações e hábitos dela.
+- Se o aparelho tiver tarefas guardadas sem conta, ao entrar o app pergunta se elas vão para essa conta.
+- Configurações: novo botão **Apagar todos os dados desta conta** (some aqui e nos outros aparelhos dela),
+  para limpar uma conta que ficou com dados de outra.
+
 ## v10 — 2026-11-07
 - Nomes e ícones escolhidos item por item:
   - Abas: **Foco**, **Planos**, **Caderno**, **Constância** e **Pulso** (ícones de Planos e Pulso novos); símbolo do Orbe novo.

@@ -44,6 +44,7 @@ button{font:inherit;color:inherit}
 .logo .ms{--s:18px}
 .logo .syncic{margin-left:auto;color:rgba(255,255,255,.55);display:grid;padding:0 6px}
 .logo .syncic+button{margin-left:4px}
+.linkbtn{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 0;align-self:flex-start}
 .hint{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 .ttl.in2{font-size:17px}
 .pw{position:relative}

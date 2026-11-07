@@ -1,7 +1,10 @@
 'use strict';
 /* Orbe — tarefas, agenda e diário das áreas da vida. Dados ficam no aparelho (localStorage 'orbe.v1'). */
 
-const KEY = 'orbe.v1';
+// Cada conta tem o próprio espaço no aparelho: 'orbe.v1:<id da conta>'. Sem conta: 'orbe.v1'.
+const BASE = 'orbe.v1';
+let CUR_UID = null; try { CUR_UID = localStorage.getItem('orbe.uid') || null; } catch (e) { /* ignora */ }
+let KEY = CUR_UID ? BASE + ':' + CUR_UID : BASE;
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const APP = $('#app');
@@ -49,9 +52,12 @@ const DEFAULT = () => ({
 });
 let DB;
 try { DB = JSON.parse(localStorage.getItem(KEY)) || DEFAULT(); } catch (e) { DB = DEFAULT(); }
-DB.habits = DB.habits || [];
+fixDB();
 // v10: ícones novos das áreas que vieram prontas (só se ainda estiverem com o ícone antigo)
-DB.areas.forEach((a) => { if (a.k === 'pro' && a.i === 'work') a.i = 'business_center'; if (a.k === 'esp' && a.i === 'self_improvement') a.i = 'wb_twilight'; });
+function fixDB() {
+  DB.habits = DB.habits || []; DB.tasks = DB.tasks || []; DB.notes = DB.notes || []; DB.areas = DB.areas || [];
+  DB.areas.forEach((a) => { if (a.k === 'pro' && a.i === 'work') a.i = 'business_center'; if (a.k === 'esp' && a.i === 'self_improvement') a.i = 'wb_twilight'; });
+}
 /* Cada mudança ganha um carimbo de tempo (u) e cada exclusão vira uma marca em DB.del, para juntar celular e computador. */
 const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k'], ['habits', 'id']];
 const strip = (o) => { const { u, ...r } = o; return JSON.stringify(r); };
@@ -505,7 +511,7 @@ function openDetail(k, s) { UI.det = [k, s]; UI.dtab = 'tudo'; renderDet(false);
 function closeDetail() { if (!$('.detail').classList.contains('open')) return; $('.detail').classList.remove('open'); UI.det = null; popLayer(); }
 
 let confirmCb = null;
-function askConfirm(msg, okLabel, cb) { confirmCb = cb; openPop(`<div class="calh"><b>${esc(msg)}</b></div><p class="msg">Isso não pode ser desfeito.</p><div class="pact"><button data-pclose>Cancelar</button><button class="pri" data-confirm>${esc(okLabel)}</button></div>`); }
+function askConfirm(msg, okLabel, cb, sub = 'Isso não pode ser desfeito.', cancel = 'Cancelar') { confirmCb = cb; openPop(`<div class="calh"><b>${esc(msg)}</b></div><p class="msg">${esc(sub)}</p><div class="pact"><button data-pclose>${esc(cancel)}</button><button class="pri" data-confirm>${esc(okLabel)}</button></div>`); }
 
 /* ---------- formulário de tarefa ---------- */
 function newForm(over = {}) {
@@ -641,7 +647,8 @@ APP.addEventListener('click', (e) => {
   }
   if ((x = c('[data-eye]'))) { const i = $('#spass'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; x.innerHTML = ic(show ? 'visibility_off' : 'visibility', 22); x.setAttribute('aria-pressed', show); x.setAttribute('aria-label', show ? 'Esconder senha' : 'Mostrar senha'); i.focus(); return; }
   if (c('[data-login]') || c('[data-signup]')) { auth(c('[data-signup]') ? 'signup' : 'login'); return; }
-  if (c('[data-logout]')) { SYNC.client.auth.signOut().then(() => { toast('Desconectado. As tarefas continuam neste aparelho.'); refreshSet(); }); return; }
+  if (c('[data-logout]')) { saveUI(); try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { /* ignora */ } SYNC.client.auth.signOut().then(() => { toast('Saiu da conta. As tarefas dela ficam guardadas na conta.'); refreshSet(); }); return; }
+  if (c('[data-clearacc]')) { askConfirm('Apagar todos os dados desta conta?', 'Apagar', clearAccount, 'Tarefas, anotações, áreas e hábitos desta conta somem aqui e nos outros aparelhos dela.'); return; }
   if (c('[data-syncnow]')) { sync(true); return; }
   if (c('[data-saveset]')) { DB.name = $('#uname').value.trim(); save(); closeSheet('set'); render('home'); return; }
   // navegação
@@ -788,16 +795,18 @@ function merge(L, Rm) {
 }
 function scheduleSync() { if (!SYNC.user) return; clearTimeout(SYNC.timer); SYNC.timer = setTimeout(sync, 1200); }
 async function sync(manual) {
-  if (!SYNC.client || !SYNC.user) return;
+  if (!SYNC.client || !SYNC.user || SYNC.user.id !== CUR_UID) return;
+  const uid = CUR_UID;
   if (SYNC.busy) { SYNC.again = true; return; }
   SYNC.busy = true; setSync('sync');
   try {
     const { data, error } = await SYNC.client.from('orbe_data').select('data').eq('user_id', SYNC.user.id).maybeSingle();
     if (error) throw error;
+    if (uid !== CUR_UID) { SYNC.busy = false; return; }
     const remote = data && data.data, merged = remote ? merge(DB, remote) : DB;
     if (JSON.stringify(merged) !== JSON.stringify(DB)) { DB = merged; localStorage.setItem(KEY, JSON.stringify(DB)); SNAP = snapshot(); renderAll(); }
     if (!remote || JSON.stringify(remote) !== JSON.stringify(merged)) {
-      const { error: e2 } = await SYNC.client.from('orbe_data').upsert({ user_id: SYNC.user.id, data: merged, updated_at: new Date().toISOString() });
+      const { error: e2 } = await SYNC.client.from('orbe_data').upsert({ user_id: uid, data: merged, updated_at: new Date().toISOString() });
       if (e2) throw e2;
     }
     SYNC.last = Date.now(); setSync('ok'); if (manual) toast('Sincronizado.');
@@ -810,8 +819,8 @@ async function sync(manual) {
 function syncSection() {
   if (!SUPA_URL || !SUPA_KEY) return '<div class="set-row"><span>Os dados ficam</span><small>só neste aparelho</small></div>';
   if (!SYNC.client) return '<div class="set-row"><span>Sincronização</span><small>sem conexão com o servidor</small></div>';
-  if (SYNC.user) return `<div class="lbl">Sincronização</div><div class="set-row"><span>Conectado como</span><small>${esc(SYNC.user.email)}</small></div><div class="set-row"><span>Última sincronização</span><small data-synclast>${SYNC.last ? agoTxt(SYNC.last) : '–'}</small></div><div class="save-row"><button class="del" data-syncnow>${ic('sync', 18)}Sincronizar agora</button><button class="del" data-logout>${ic('logout', 18)}Sair</button></div>`;
-  return `<div class="lbl">Sincronizar celular e computador</div><p class="hint">Entre com o mesmo e-mail e senha nos dois aparelhos para ver as mesmas tarefas. O que já está aqui é mantido.</p>
+  if (SYNC.user) return `<div class="lbl">Sincronização</div><div class="set-row"><span>Conectado como</span><small>${esc(SYNC.user.email)}</small></div><div class="set-row"><span>Última sincronização</span><small data-synclast>${SYNC.last ? agoTxt(SYNC.last) : '–'}</small></div><div class="save-row"><button class="del" data-syncnow>${ic('sync', 18)}Sincronizar agora</button><button class="del" data-logout>${ic('logout', 18)}Sair</button></div><button class="linkbtn" data-clearacc>Apagar todos os dados desta conta</button>`;
+  return `<div class="lbl">Sincronizar celular e computador</div><p class="hint">Entre com o mesmo e-mail e senha nos dois aparelhos para ver as mesmas tarefas. Cada conta tem as suas tarefas, separadas.</p>
   <input class="ttl in2" id="semail" type="email" placeholder="E-mail" autocomplete="email" inputmode="email">
   <div class="pw"><input class="ttl in2" id="spass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="Mostrar senha" aria-pressed="false">${ic('visibility', 22)}</button></div>
   <div class="save-row"><button class="del" data-signup>Criar conta</button><button class="save" data-login>Entrar</button></div>`;
@@ -837,11 +846,46 @@ async function auth(kind) {
     toast('Conectado. Sincronizando…');
   } catch (e) { toast(navigator.onLine ? authMsg(e) : 'Sem internet.'); }
 }
+function useAccount(uid, email) {
+  if (uid === CUR_UID) return;
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { /* ignora */ }
+  const k = uid ? BASE + ':' + uid : BASE;
+  let next = null; try { next = JSON.parse(localStorage.getItem(k)); } catch (e) { next = null; }
+  let anon = null;
+  if (!next && uid) { try { anon = JSON.parse(localStorage.getItem(BASE)); } catch (e) { anon = null; } }
+  KEY = k; CUR_UID = uid;
+  try { uid ? localStorage.setItem('orbe.uid', uid) : localStorage.removeItem('orbe.uid'); } catch (e) { /* ignora */ }
+  DB = next || DEFAULT(); fixDB();
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { /* ignora */ }
+  SNAP = snapshot(); UI.qf = 0; if (UI.det) closeDetail(); renderAll();
+  // Tarefas que estavam no aparelho sem conta: pergunta se vão para esta conta
+  if (anon && ((anon.tasks || []).length || (anon.habits || []).length || (anon.notes || []).length)) {
+    setTimeout(() => askConfirm(`Levar as tarefas deste aparelho para ${email || 'esta conta'}?`, 'Levar', () => {
+      DB = merge(DB, anon); fixDB(); localStorage.setItem(KEY, JSON.stringify(DB)); SNAP = snapshot();
+      try { localStorage.removeItem(BASE); } catch (e) { /* ignora */ }
+      renderAll(); sync(); toast('Tarefas levadas para esta conta.');
+    }, 'Elas estavam guardadas aqui sem conta. Se forem de outra pessoa, toque em Não.', 'Não'), 400);
+  }
+}
+async function clearAccount() {
+  const now = Date.now(), del = { ...(DB.del || {}) };
+  COLS.forEach(([c, id]) => (DB[c] || []).forEach((x) => (del[x[id]] = now)));
+  const fresh = DEFAULT(); fresh.del = del; fresh.name = DB.name; fresh.nameU = DB.nameU;
+  fresh.areas.forEach((a) => (a.u = now + 1));
+  DB = fresh; fixDB(); localStorage.setItem(KEY, JSON.stringify(DB)); SNAP = snapshot(); renderAll();
+  if (SYNC.user && SYNC.user.id === CUR_UID) {
+    const { error } = await SYNC.client.from('orbe_data').upsert({ user_id: CUR_UID, data: DB, updated_at: new Date().toISOString() });
+    toast(error ? 'Apaguei aqui, mas não consegui enviar. Toque em Sincronizar agora.' : 'Dados desta conta apagados.');
+  } else toast('Dados apagados deste aparelho.');
+  refreshSet();
+}
 function initSync() {
   if (!SUPA_URL || !SUPA_KEY || !window.supabase) return;
   SYNC.client = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'orbe.auth' } });
   SYNC.client.auth.onAuthStateChange((ev, session) => {
     SYNC.user = session ? session.user : null;
+    if (ev === 'SIGNED_OUT' || (ev === 'INITIAL_SESSION' && !SYNC.user && CUR_UID)) useAccount(null);
+    else if (SYNC.user && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) useAccount(SYNC.user.id, SYNC.user.email);
     setSync(SYNC.user ? SYNC.state === 'off' ? 'sync' : SYNC.state : 'off');
     if (SYNC.user && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) setTimeout(sync, 0);
     refreshSet();
