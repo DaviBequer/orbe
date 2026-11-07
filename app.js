@@ -34,22 +34,24 @@ function fmtDate(s, long) {
 }
 
 /* ---------- dados ---------- */
-const Q = { 1: { k: 'Fazer agora', d: 'Urgente e importante', s: 'Fazer' }, 2: { k: 'Agendar', d: 'Importante, sem pressa', s: 'Agendar' }, 3: { k: 'Delegar', d: 'Urgente, pouco importante', s: 'Delegar' }, 4: { k: 'Eliminar', d: 'Nem urgente, nem importante', s: 'Eliminar' } };
-const SUBI = { Clientes: 'handshake', Projetos: 'folder_open', Estudos: 'school', Saúde: 'favorite', Casa: 'cottage', Finanças: 'account_balance_wallet', Leitura: 'menu_book', Oração: 'volunteer_activism', Igreja: 'church' };
-const ICONS = ['work', 'person', 'self_improvement', 'fitness_center', 'family_restroom', 'savings', 'school', 'palette', 'rocket_launch', 'volunteer_activism', 'travel_explore', 'eco', 'favorite', 'home', 'menu_book', 'church', 'sports_soccer', 'music_note'];
+const Q = { 1: { k: 'Faça', d: 'Urgente e importante', s: 'Faça' }, 2: { k: 'Planeje', d: 'Importante, sem pressa', s: 'Planeje' }, 3: { k: 'Delegar', d: 'Urgente, pouco importante', s: 'Delegar' }, 4: { k: 'Solte', d: 'Nem urgente, nem importante', s: 'Solte' } };
+const SUBI = { Clientes: 'groups', Projetos: 'account_tree', Estudos: 'history_edu', Saúde: 'ecg_heart', Casa: 'cottage', Finanças: 'attach_money', Leitura: 'auto_stories', Oração: 'volunteer_activism', Igreja: 'church' };
+const ICONS = ['business_center', 'person', 'wb_twilight', 'work', 'self_improvement', 'fitness_center', 'family_restroom', 'savings', 'school', 'palette', 'rocket_launch', 'volunteer_activism', 'travel_explore', 'eco', 'favorite', 'home', 'menu_book', 'church', 'sports_soccer', 'music_note'];
 const COLORS = ['#111214', '#0F5463', '#7A7D82', '#3F7F8C', '#5B5F66', '#A3A7AC'];
 const DEFAULT = () => ({
   v: 1, name: 'Davi',
   areas: [
-    { k: 'pro', n: 'Profissional', i: 'work', c: '#111214', subs: ['Clientes', 'Projetos', 'Estudos'] },
+    { k: 'pro', n: 'Profissional', i: 'business_center', c: '#111214', subs: ['Clientes', 'Projetos', 'Estudos'] },
     { k: 'pes', n: 'Pessoal', i: 'person', c: '#0F5463', subs: ['Saúde', 'Casa', 'Finanças'] },
-    { k: 'esp', n: 'Espiritual', i: 'self_improvement', c: '#7A7D82', subs: ['Leitura', 'Oração', 'Igreja'] },
+    { k: 'esp', n: 'Espiritual', i: 'wb_twilight', c: '#7A7D82', subs: ['Leitura', 'Oração', 'Igreja'] },
   ],
   tasks: [], notes: [], habits: [],
 });
 let DB;
 try { DB = JSON.parse(localStorage.getItem(KEY)) || DEFAULT(); } catch (e) { DB = DEFAULT(); }
 DB.habits = DB.habits || [];
+// v10: ícones novos das áreas que vieram prontas (só se ainda estiverem com o ícone antigo)
+DB.areas.forEach((a) => { if (a.k === 'pro' && a.i === 'work') a.i = 'business_center'; if (a.k === 'esp' && a.i === 'self_improvement') a.i = 'wb_twilight'; });
 /* Cada mudança ganha um carimbo de tempo (u) e cada exclusão vira uma marca em DB.del, para juntar celular e computador. */
 const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k'], ['habits', 'id']];
 const strip = (o) => { const { u, ...r } = o; return JSON.stringify(r); };
@@ -90,12 +92,12 @@ const isLate = (t) => !t.done && t.date && t.date < today();
 
 function row(t) {
   const meta = [
-    isLate(t) ? `<span class="late">${ic('history', 13)}atrasada · ${fmtDate(t.date)}</span>` : '',
-    t.time ? `<span class="tm">${ic('schedule', 13)}${t.time}</span>` : '',
+    isLate(t) ? `<span class="late">${ic('history', 13)}vencida · ${fmtDate(t.date)}</span>` : '',
+    t.time ? `<span class="tm">${ic('hourglass_empty', 13)}${t.time}</span>` : '',
     `<span>${esc(areaName(t.a))}${t.s ? ' · ' + esc(t.s) : ''}</span>`,
-    t.hist && t.hist.length ? `<span class="rm">${ic('event_repeat', 13)}remarcada ${t.hist.length}×</span>` : '',
+    t.hist && t.hist.length ? `<span class="rm">${ic('event_repeat', 13)}adiada ${t.hist.length}×</span>` : '',
   ].join('');
-  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${ic('check', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div></div></div>`;
+  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${ic('done_all', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div></div></div>`;
 }
 
 /* ---------- HOJE ---------- */
@@ -114,13 +116,13 @@ function home() {
   const d = new Date();
   const now = pad(d.getHours()) + ':' + pad(d.getMinutes());
   const n = td.filter((t) => t.date === t0 && t.time && t.q <= 2 && !t.done && t.time >= now).sort((a, b) => (a.time < b.time ? -1 : 1))[0];
-  let h = `<div class="hero"><div class="logo">${ic('light_mode', 18)}Orbe${syncIcon()}<button data-settings aria-label="Configurações">${ic('settings', 19)}</button></div>
+  let h = `<div class="hero"><div class="logo">${ic('blur_circular', 18)}Orbe${syncIcon()}<button data-settings aria-label="Configurações">${ic('menu', 19)}</button></div>
     <h2>${greeting()}${DB.name ? ', ' + esc(DB.name) : ''}</h2><p>${WDF[d.getDay()][0].toUpperCase() + WDF[d.getDay()].slice(1)}, ${d.getDate()} de ${MOF[d.getMonth()].toLowerCase()} · ${pl(open, 'aberta', 'abertas')} hoje</p>
     <div class="pl"><span>Progresso de hoje</span><b>${done} de ${td.length}</b></div><div class="prog"><i style="width:${p}%"></i></div>
     <div class="ht">${[1, 2, 3, 4].map((q) => `<button class="q${q}${UI.qf === q ? ' on' : ''}" data-qf="${q}"><span class="tn">${mini(q)}<b>${cnt(q)}</b></span><small>${Q[q].s}</small></button>`).join('')}</div></div>`;
-  const nextH = n ? `<div class="next" data-id="${n.id}"><span class="ni">${ic('schedule', 22)}</span><div><small>Próximo importante</small><b>${n.time} · ${esc(n.t)}</b></div><span class="in">${inTxt(n.time)}</span></div>` : '';
+  const nextH = n ? `<div class="next" data-id="${n.id}"><span class="ni">${ic('hourglass_empty', 22)}</span><div><small>Não esqueça</small><b>${n.time} · ${esc(n.t)}</b></div><span class="in">${inTxt(n.time)}</span></div>` : '';
   h += nextH.replace('class="next"', 'class="next m-only"') + '<div class="cols"><div class="ca">';
-  h += `<div class="sec-h">Hoje por prioridade<small>${UI.qf ? 'filtrado · toque de novo para ver tudo' : pl(open, 'aberta', 'abertas')}</small></div>`;
+  h += `<div class="sec-h">Em foco agora<small>${UI.qf ? 'filtrado · toque de novo para ver tudo' : pl(open, 'aberta', 'abertas')}</small></div>`;
   let any = false;
   [1, 2, 3, 4].filter((q) => !UI.qf || UI.qf === q).forEach((q) => {
     const l = td.filter((t) => t.q === q); if (!l.length) return; any = true;
@@ -129,13 +131,13 @@ function home() {
   if (!any) h += `<div class="empty-big">${ic('wb_sunny')}${UI.qf ? 'Nada nesta prioridade hoje.' : 'Nada para hoje.<br>Toque no + para criar uma tarefa.'}</div>`;
   h += '</div><div class="cb">' + nextH.replace('class="next"', 'class="next d-only"');
   const tmw = addDays(t0, 1), tm = DB.tasks.filter((t) => t.date === tmw).sort(byQ);
-  if (tm.length) h += `<div class="sec-h">Amanhã<small>${fmtDate(tmw, true).split(' · ')[1]} · ${tm.length}</small></div><div class="qgroup plain">${tm.map(row).join('')}</div>`;
+  if (tm.length) h += `<div class="sec-h">Para amanhã<small>${fmtDate(tmw, true).split(' · ')[1]} · ${tm.length}</small></div><div class="qgroup plain">${tm.map(row).join('')}</div>`;
   else {
     const wk = DB.tasks.filter((t) => t.date && t.date > tmw && t.date <= addDays(t0, 7)).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : byQ(a, b)));
     if (wk.length) h += `<div class="sec-h">Próximos dias<small>${wk.length}</small></div><div class="qgroup plain">${wk.map((t) => row(t).replace('<div class="tmeta">', `<div class="tmeta"><span>${fmtDate(t.date)}</span>`)).join('')}</div>`;
   }
   const nd = DB.tasks.filter((t) => !t.date && !t.done).sort(byQ);
-  if (nd.length) h += `<div class="sec-h">Sem data<small>${nd.length}</small></div><div class="qgroup plain">${nd.map(row).join('')}</div>`;
+  if (nd.length) h += `<div class="sec-h">Sem prazo<small>${nd.length}</small></div><div class="qgroup plain">${nd.map(row).join('')}</div>`;
   h += habitsToday();
   return h + '</div></div>';
 }
@@ -198,16 +200,16 @@ function visual() {
   return `<div class="vis"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Equilíbrio entre as áreas">${circ}${lab}</svg><p class="cap">${tot ? 'Quanto das tarefas desta semana foi para cada área' : 'Quando tiver tarefas nesta semana, aqui aparece o equilíbrio entre as áreas'}</p></div>`;
 }
 function areas() {
-  let h = `<div class="ag-h"><b>Vida</b><span class="muted" style="font-size:12px">${pl(DB.areas.length, 'área', 'áreas')}</span></div>` + '<div class="cols vida"><div class="ca">' + visual() + '</div><div class="cb">';
+  let h = `<div class="ag-h"><b>Caderno</b><span class="muted" style="font-size:12px">${pl(DB.areas.length, 'área', 'áreas')}</span></div>` + '<div class="cols vida"><div class="ca">' + visual() + '</div><div class="cb">';
   DB.areas.forEach((a) => {
     const op = DB.tasks.filter((t) => t.a === a.k && !t.done).length, nts = DB.notes.filter((n) => n.a === a.k).length;
-    h += `<div class="acc${UI.open.has(a.k) ? ' open' : ''}" data-acc="${a.k}"><button><span class="ai2" style="--c:${a.c}">${ic(a.i, 20)}</span><div><b>${esc(a.n)}</b><small>${pl(a.subs.length, 'parte', 'partes')} · ${pl(op, 'aberta', 'abertas')} · ${pl(nts, 'anotação', 'anotações')}</small></div>${ic('chevron_right', 18).replace('class="ms"', 'class="ms chev"')}</button><div class="in"><div>
+    h += `<div class="acc${UI.open.has(a.k) ? ' open' : ''}" data-acc="${a.k}"><button><span class="ai2" style="--c:${a.c}">${ic(a.i, 20)}</span><div><b>${esc(a.n)}</b><small>${pl(a.subs.length, 'subárea', 'subáreas')} · ${pl(op, 'aberta', 'abertas')} · ${pl(nts, 'anotação', 'anotações')}</small></div>${ic('chevron_right', 18).replace('class="ms"', 'class="ms chev"')}</button><div class="in"><div>
     ${a.subs.map((s) => { const o = DB.tasks.filter((t) => t.a === a.k && t.s === s && !t.done).length, nt = DB.notes.filter((n) => n.a === a.k && n.s === s).length; return `<div class="srow" data-det="${a.k}" data-sub="${esc(s)}"><span class="si">${ic(subIcon(s), 19)}</span><div><b>${esc(s)}</b><small>${pl(o, 'tarefa', 'tarefas')} · ${pl(nt, 'anotação', 'anotações')}</small></div>${ic('chevron_right', 16)}</div>`; }).join('')}
-    ${UI.adding === a.k ? `<div class="addrow"><span class="si2">${ic('label', 18)}</span><input id="newpart" placeholder="Nome da parte" aria-label="Nome da nova parte" enterkeyhint="done"><button class="ok" data-okp="${a.k}" aria-label="Criar parte">${ic('check', 16)}</button></div>` : `<button class="addrow" data-addp="${a.k}"><span class="si2">${ic('add', 18)}</span>Nova parte em ${esc(a.n)}</button>`}
-    <div class="accedit"><button data-editarea="${a.k}">${ic('edit', 16)}Editar área</button></div>
+    ${UI.adding === a.k ? `<div class="addrow"><span class="si2">${ic('label', 18)}</span><input id="newpart" placeholder="Nome da subárea" aria-label="Nome da nova subárea" enterkeyhint="done"><button class="ok" data-okp="${a.k}" aria-label="Criar subárea">${ic('done_all', 16)}</button></div>` : `<button class="addrow" data-addp="${a.k}"><span class="si2">${ic('add', 18)}</span>Nova subárea em ${esc(a.n)}</button>`}
+    <div class="accedit"><button data-editarea="${a.k}">${ic('draw', 16)}Editar área</button></div>
     </div></div></div>`;
   });
-  h += `<button class="newarea" data-newarea>${ic('add', 18)}Nova área</button>`;
+  h += `<button class="newarea" data-newarea>${ic('add', 18)}Área</button>`;
   return h + '</div></div>';
 }
 function detail() {
@@ -215,13 +217,13 @@ function detail() {
   const [k, s] = UI.det, a = area(k); if (!a) return '';
   const ts = DB.tasks.filter((t) => t.a === k && t.s === s).sort(byQ), ns = DB.notes.filter((n) => n.a === k && n.s === s).sort((x, y) => (x.at < y.at ? 1 : -1)), tab = UI.dtab;
   const open = ts.filter((t) => !t.done).length;
-  let h = `<div class="dhd"><button class="rbtn" data-back aria-label="Voltar">${ic('arrow_back', 20)}</button><small>Vida › ${esc(a.n)}</small><button class="rbtn" data-delpart aria-label="Excluir parte">${ic('delete', 19)}</button></div>
+  let h = `<div class="dhd"><button class="rbtn" data-back aria-label="Voltar">${ic('arrow_back', 20)}</button><small>Caderno › ${esc(a.n)}</small><button class="rbtn" data-delpart aria-label="Excluir subárea">${ic('remove_circle', 19)}</button></div>
   <div class="dtitle"><span class="si">${ic(subIcon(s), 24)}</span><div><h3>${esc(s)}</h3><p>${pl(open, 'tarefa aberta', 'tarefas abertas')} · ${pl(ns.length, 'anotação', 'anotações')}</p></div></div>
   <div class="seg" style="margin-top:10px">${[['tudo', 'Tudo'], ['tarefas', 'Tarefas'], ['notas', 'Anotações']].map(([v, l]) => `<button data-dtab="${v}" class="${tab === v ? 'on' : ''}">${l}</button>`).join('')}</div>
-  <div class="wr2"><textarea id="newnote" rows="1" placeholder="Escrever uma anotação…" aria-label="Nova anotação"></textarea><button data-addnote>${ic('edit', 16)}Anotar</button></div>`;
+  <div class="wr2"><textarea id="newnote" rows="1" placeholder="Escrever uma anotação…" aria-label="Nova anotação"></textarea><button data-addnote>${ic('draw', 16)}Anotar</button></div>`;
   if (tab !== 'notas') h += `<div class="sec-h">Tarefas<small>por prioridade</small></div><div class="qgroup plain">${ts.map(row).join('') || '<p class="empty">Nenhuma tarefa aqui ainda.</p>'}</div>`;
   if (tab !== 'tarefas') h += `<div class="sec-h">Anotações<small>${ns.length}</small></div><div>${ns.map((n) => `<div class="dnote">${ic('sticky_note_2', 18)}<span>${esc(n.t).replace(/\n/g, '<br>')}<small>${fmtDate(n.at.slice(0, 10))}</small></span><button class="rm" data-delnote="${n.id}" aria-label="Apagar anotação">${ic('close', 16)}</button></div>`).join('') || '<p class="empty">Nada anotado ainda.</p>'}</div>`;
-  h += `<div class="dacts"><button data-newtask>${ic('task_alt', 18)}Nova tarefa em ${esc(s)}</button></div>`;
+  h += `<div class="dacts"><button data-newtask>${ic('task_alt', 18)}Anotar tarefa em ${esc(s)}</button></div>`;
   return h;
 }
 
@@ -263,16 +265,16 @@ function lineSvg(pts) {
 function stats() {
   const per = UI.sview === 'semana', [a, b] = period(UI.sview), S = measure(a, b), [pa, pb] = period(UI.sview, -1), P = measure(pa, pb);
   const f = (v) => (v === null ? '–' : v + '%');
-  let h = `<div class="ag-h"><b>Números</b><div class="seg"><button data-sview="semana" class="${per ? 'on' : ''}">Semana</button><button data-sview="mes" class="${!per ? 'on' : ''}">Mês</button></div></div>`;
-  if (!S.total && !DB.tasks.length) return h + `<div class="empty-big">${ic('monitoring')}Os números aparecem conforme tu cria e conclui tarefas.<br>Eles mostram quanto tu faz no dia marcado, quanto remarca e o que mais volta.</div>`;
-  h += `<div class="kpis"><div class="kpi dk"><small>No dia certo</small><b>${f(S.ok)}</b></div><div class="kpi"><small>Remarcadas</small><b>${f(S.rem)}</b></div><div class="kpi"><small>Atrasadas</small><b>${f(S.late)}</b></div><div class="kpi"><small>Tempo até fazer</small><b>${S.avg === null ? '–' : S.avg.toFixed(1).replace('.', ',')}<span> dias</span></b></div></div>`;
+  let h = `<div class="ag-h"><b>Pulso</b><div class="seg"><button data-sview="semana" class="${per ? 'on' : ''}">Semana</button><button data-sview="mes" class="${!per ? 'on' : ''}">Mês</button></div></div>`;
+  if (!S.total && !DB.tasks.length) return h + `<div class="empty-big">${ic('monitor_heart')}Os números aparecem conforme tu cria e conclui tarefas.<br>Eles mostram quanto tu faz no dia marcado, quanto remarca e o que mais volta.</div>`;
+  h += `<div class="kpis"><div class="kpi dk"><small>Pontuais</small><b>${f(S.ok)}</b></div><div class="kpi"><small>Adiadas</small><b>${f(S.rem)}</b></div><div class="kpi"><small>Vencidas</small><b>${f(S.late)}</b></div><div class="kpi"><small>Dias até concluir</small><b>${S.avg === null ? '–' : S.avg.toFixed(1).replace('.', ',')}<span> dias</span></b></div></div>`;
   let delta = '';
   if (S.ok !== null && P.ok !== null) { const dd = S.ok - P.ok; delta = `${dd >= 0 ? '+' : ''}${dd}% que ${per ? 'a semana passada' : 'o mês passado'}`; }
   h += '<div class="sgrid">';
-  h += `<div class="card"><h6><span>Feitas no dia certo</span><b>${delta}</b></h6>${lineSvg(lineData(UI.sview))}</div>`;
+  h += `<div class="card"><h6><span>Pontuais</span><b>${delta}</b></h6>${lineSvg(lineData(UI.sview))}</div>`;
   if (S.total) {
     const top = S.qs[1] >= S.qs[0];
-    h += `<div class="card"><h6>Onde vai teu tempo</h6><div class="qd">${S.qs.map((p, i) => `<div class="q${i + 1}"><b>${p}%</b><small>${Q[i + 1].k}</small></div>`).join('')}</div><p class="ins">A maior parte está em <b>${top ? 'Agendar' : 'Fazer agora'}</b>${top ? ': importante sem ser urgente. Bom sinal.' : ': muita coisa está virando urgente.'}</p></div>`;
+    h += `<div class="card"><h6>Onde vai teu tempo</h6><div class="qd">${S.qs.map((p, i) => `<div class="q${i + 1}"><b>${p}%</b><small>${Q[i + 1].k}</small></div>`).join('')}</div><p class="ins">A maior parte está em <b>${top ? Q[2].k : Q[1].k}</b>${top ? ': importante sem ser urgente. Bom sinal.' : ': muita coisa está virando urgente.'}</p></div>`;
   }
   const rep = DB.tasks.filter((t) => t.hist && t.hist.length).sort((x, y) => y.hist.length - x.hist.length).slice(0, 3);
   h += `<div class="card"><h6>Tarefas que mais voltam</h6>${rep.map((t) => `<div class="rep"><span>${esc(t.t)}</span><b>${t.hist.length}×</b></div>`).join('') || '<p class="empty" style="padding:4px 0">Nenhuma tarefa remarcada até agora.</p>'}${S.avg !== null ? `<p class="ins">Uma tarefa leva em média <b>${S.avg.toFixed(1).replace('.', ',')} dias</b> entre ser criada e ser feita.</p>` : ''}</div>`;
@@ -285,7 +287,7 @@ function stats() {
 // Cada marca guarda quando foi feita: days[data] = { at: ISO }. Marcas antigas (valor 1) contam como feitas no dia.
 const HICONS = ['water_drop', 'fitness_center', 'menu_book', 'self_improvement', 'bedtime', 'directions_run', 'restaurant', 'local_cafe', 'spa', 'volunteer_activism', 'edit_note', 'savings', 'smoke_free', 'no_drinks', 'phone_android', 'sports_esports', 'fastfood', 'music_note'];
 const HGOALS = [21, 30, 66, 90];
-const HLEVELS = ['Semente', 'Broto', 'Raiz', 'Caule', 'Folhas', 'Galhos', 'Tronco', 'Copa', 'Árvore', 'Automático'];
+const HLEVELS = ['Poeira', 'Faísca', 'Brilho', 'Lua', 'Satélite', 'Planeta', 'Estrela', 'Constelação', 'Galáxia', 'Órbita'];
 const ALPHA = 1 - Math.pow(0.2, 1 / 30); // suavização: 30 dias perfeitos ≈ 80% de força, 60 dias ≈ 96%
 const f1 = (n) => n.toFixed(1).replace('.', ',');
 const hStart = (h) => ymd(new Date(h.created || Date.now()));
@@ -357,24 +359,24 @@ function hMatrix(days) {
     const sc = hScore(h).score;
     return `<tr class="${h.type === 'bad' ? 'bad' : ''}"><th class="hn" data-edithab="${h.id}"><span class="hi">${ic(h.i || 'check', 17)}</span><span class="nm">${esc(h.n)}<small>${sc === null ? 'novo' : f1(sc)}</small></span></th>${days.map((s) => {
       const k = hState(h, s), off = k === 'fut' || k === 'off';
-      const inner = k === 'x' ? ic('close', 15) : k.startsWith('ok') && h.type !== 'bad' ? ic('check', 15) : k === 'ok' ? '' : '';
+      const inner = k === 'x' ? ic('close', 15) : k.startsWith('ok') && h.type !== 'bad' ? ic('done_all', 15) : k === 'ok' ? '' : '';
       return `<td><button class="hcell ${k}${s === t0 ? ' today' : ''}" data-hday="${s}" data-hid="${h.id}"${off ? ' disabled' : ''} aria-label="${esc(h.n)}, ${fmtDate(s, true)}">${inner}</button></td>`;
     }).join('')}</tr>`;
   };
   const good = DB.habits.filter((x) => x.type !== 'bad'), bad = DB.habits.filter((x) => x.type === 'bad');
   const grp = (l, t) => (l.length ? `<tr class="grp"><th class="hn" colspan="${days.length + 1}"><span>${t}</span></th></tr>${l.map(rowH).join('')}` : '');
-  return `<div class="hmx-wrap${UI.hview === 'mes' ? ' month' : ''}"><table class="hmx"><thead>${head}</thead><tbody>${grp(good, 'Bons · quero fazer')}${grp(bad, 'Ruins · quero evitar (× = fiz)')}</tbody></table></div>
+  return `<div class="hmx-wrap${UI.hview === 'mes' ? ' month' : ''}"><table class="hmx"><thead>${head}</thead><tbody>${grp(good, 'Construir · quero fazer')}${grp(bad, 'Cortar · quero evitar (× = fiz)')}</tbody></table></div>
   <div class="legend hleg"><span><i class="lg ok"></i>feito no dia</span><span><i class="lg ok late"></i>marcado depois</span><span><i class="lg okb"></i>evitado</span><span><i class="lg x"></i>caí</span></div>`;
 }
 function hAnalysis(h) {
   const r = hScore(h), bad = h.type === 'bad', i = r.info;
-  if (r.score === null) return `<div class="hcard"><div class="hcard-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div><b>${esc(h.n)}</b><small>${bad ? 'Ruim' : 'Bom'} · meta de ${hGoal(h)} dias</small></div></div><p class="empty">A nota aparece a partir de amanhã.</p></div>`;
+  if (r.score === null) return `<div class="hcard"><div class="hcard-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div><b>${esc(h.n)}</b><small>${bad ? 'Cortar' : 'Construir'} · meta de ${hGoal(h)} dias</small></div></div><p class="empty">A nota aparece a partir de amanhã.</p></div>`;
   const lv = Math.min(9, Math.floor(r.score / 10));
   const gap = r.parts.map((p) => [p[0], p[2] * (1 - p[3])]).sort((a, c) => c[1] - a[1])[0];
   const left = Math.max(0, hGoal(h) - (bad ? i.cur : i.doneDays));
   const tip = gap && gap[1] > 0.5 ? (gap[0] === 'meta' ? `Faltam ${pl(left, 'dia', 'dias')} para a meta de ${hGoal(h)}.` : TIPS[gap[0]]) : 'Tudo em dia. Continue assim.';
   return `<div class="hcard${bad ? ' bad' : ''}">
-  <div class="hcard-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div data-edithab="${h.id}"><b>${esc(h.n)}</b><small>${bad ? 'Ruim · quero evitar' : 'Bom · quero fazer'} · meta de ${hGoal(h)} dias</small></div></div>
+  <div class="hcard-h"><span class="hi">${ic(h.i || 'check', 20)}</span><div data-edithab="${h.id}"><b>${esc(h.n)}</b><small>${bad ? 'Cortar · quero evitar' : 'Construir · quero fazer'} · meta de ${hGoal(h)} dias</small></div></div>
   <div class="hscore"><b>${f1(r.score)}</b><div><span>${HLEVELS[lv]}</span><small>nível ${lv + 1} de 10</small></div></div>
   <div class="hbar"><i style="width:${r.score}%"></i>${[10, 20, 30, 40, 50, 60, 70, 80, 90].map((v) => `<em style="left:${v}%"></em>`).join('')}</div>
   <div class="hparts">${r.parts.map((p) => `<div><div class="bar-l"><span>${p[1]}</span><b>${f1(p[2] * p[3])} / ${p[2]}</b></div><div class="bar"><i data-w="${Math.round(p[3] * 100)}"></i></div></div>`).join('')}</div>
@@ -385,21 +387,21 @@ function hAnalysis(h) {
 function habits() {
   const days = hRange(), sem = UI.hview === 'semana', d0 = parse(days[0]), d1 = parse(days[days.length - 1]);
   const lbl = sem ? `${d0.getDate()} ${MO[d0.getMonth()]} a ${d1.getDate()} ${MO[d1.getMonth()]}` : `${MOF[d0.getMonth()]} ${d0.getFullYear()}`;
-  let h = `<div class="ag-h"><b>Hábitos</b><div class="seg"><button data-hview="semana" class="${sem ? 'on' : ''}">Semana</button><button data-hview="mes" class="${!sem ? 'on' : ''}">Mês</button></div></div>
+  let h = `<div class="ag-h"><b>Constância</b><div class="seg"><button data-hview="semana" class="${sem ? 'on' : ''}">Semana</button><button data-hview="mes" class="${!sem ? 'on' : ''}">Mês</button></div></div>
   <div class="ag-nav"><p class="sub-h">${lbl}</p>${UI.hoff ? `<button data-hnav="0" aria-label="Voltar para agora">${ic('today', 18)}</button>` : ''}<button data-hnav="-1" aria-label="Anterior">${ic('chevron_left', 20)}</button><button data-hnav="1" aria-label="Próximo"${UI.hoff >= 0 ? ' disabled' : ''}>${ic('chevron_right', 20)}</button></div>`;
-  if (!DB.habits.length) return h + `<div class="empty-big">${ic('checklist')}Acompanhe o que tu quer fazer todo dia (ler, treinar, orar)<br>e o que quer evitar (celular na cama, doce).<br>Cada hábito ganha uma linha na grade e uma nota de 0 a 100.</div><button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
+  if (!DB.habits.length) return h + `<div class="empty-big">${ic('checklist')}Acompanhe o que tu quer fazer todo dia (ler, treinar, orar)<br>e o que quer evitar (celular na cama, doce).<br>Cada hábito ganha uma linha na grade e uma nota de 0 a 100.</div><button class="newarea" data-newhab>${ic('add', 18)}Hábito</button>`;
   const good = DB.habits.filter((x) => x.type !== 'bad'), bad = DB.habits.filter((x) => x.type === 'bad'), t0 = today();
-  h += `<p class="hsum">${good.length ? `${good.filter((x) => hMarked(x, t0)).length} de ${good.length} bons feitos hoje` : ''}${good.length && bad.length ? ' · ' : ''}${bad.length ? `${bad.filter((x) => !hMarked(x, t0)).length} de ${bad.length} ruins evitados` : ''}</p>`;
-  h += hMatrix(days) + `<button class="newarea" data-newhab>${ic('add', 18)}Novo hábito</button>`;
-  h += `<div class="sec-h">Análise de cada hábito<small>nota de 0 a 100</small></div><div class="hlist">${DB.habits.map(hAnalysis).join('')}</div>`;
+  h += `<p class="hsum">${good.length ? `${good.filter((x) => hMarked(x, t0)).length} de ${good.length} para construir feitos hoje` : ''}${good.length && bad.length ? ' · ' : ''}${bad.length ? `${bad.filter((x) => !hMarked(x, t0)).length} de ${bad.length} para cortar evitados` : ''}</p>`;
+  h += hMatrix(days) + `<button class="newarea" data-newhab>${ic('add', 18)}Hábito</button>`;
+  h += `<div class="sec-h">Desempenho<small>nota de 0 a 100</small></div><div class="hlist">${DB.habits.map(hAnalysis).join('')}</div>`;
   h += `<details class="hhow"><summary>${ic('info', 18)}Como a nota é calculada</summary><div>
-  <p><b>Força do hábito</b> (até 35 pontos; 40 nos ruins): uma média que dá mais peso aos dias recentes. Com todos os dias feitos, chega a cerca de 80% em um mês e 96% em dois. Uma falha isolada pesa pouco; falhas frequentes derrubam.</p>
-  <p><b>Constância dos últimos 14 dias</b> (20; 25 nos ruins): quantos dos últimos 14 dias tu fez (ou evitou).</p>
-  <p><b>Marcou no mesmo dia</b> (15, só nos bons): marcar no dia vale 100%; no dia seguinte, 60%; dois dias depois, 30%; três ou mais, 10%. Registro feito na hora é mais confiável do que de memória.</p>
-  <p><b>Meta</b> (15; 20 nos ruins): dias feitos em relação à meta do hábito. Nos ruins, é a sequência atual sem cair.</p>
-  <p><b>Recuperação</b> (10; 15 nos ruins): quantas vezes, depois de falhar, tu voltou já no dia seguinte.</p>
-  <p><b>Horário regular</b> (5, só nos bons): fazer mais ou menos na mesma hora todo dia.</p>
-  <p>Os níveis vão de 1 (Semente, 0 a 9,9) a 10 (Automático, 90 a 100), a cada 10 pontos. O dia de hoje só entra na conta depois de marcado.</p></div></details>`;
+  <p><b>Força do hábito</b> (até 35 pontos; 40 nos de cortar): uma média que dá mais peso aos dias recentes. Com todos os dias feitos, chega a cerca de 80% em um mês e 96% em dois. Uma falha isolada pesa pouco; falhas frequentes derrubam.</p>
+  <p><b>Constância dos últimos 14 dias</b> (20; 25 nos de cortar): quantos dos últimos 14 dias tu fez (ou evitou).</p>
+  <p><b>Marcou no mesmo dia</b> (15, só nos de construir): marcar no dia vale 100%; no dia seguinte, 60%; dois dias depois, 30%; três ou mais, 10%. Registro feito na hora é mais confiável do que de memória.</p>
+  <p><b>Meta</b> (15; 20 nos de cortar): dias feitos em relação à meta do hábito. Nos de cortar, é a sequência atual sem cair.</p>
+  <p><b>Recuperação</b> (10; 15 nos de cortar): quantas vezes, depois de falhar, tu voltou já no dia seguinte.</p>
+  <p><b>Horário regular</b> (5, só nos de construir): fazer mais ou menos na mesma hora todo dia.</p>
+  <p>Os níveis vão de 1 (Poeira, 0 a 9,9) a 10 (Órbita, 90 a 100), a cada 10 pontos. O dia de hoje só entra na conta depois de marcado.</p></div></details>`;
   return h;
 }
 function habitsToday() {
@@ -411,10 +413,10 @@ function habSheet() {
   const F = UI.habForm;
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar hábito' : 'Novo hábito'}<button class="rbtn" data-closehab aria-label="Fechar">${ic('close', 18)}</button></h4>
   <input class="ttl" id="hname" placeholder="Ex.: Ler 10 páginas" value="${esc(F.n)}" autocomplete="off" enterkeyhint="done">
-  <div class="lbl">Tipo</div><div class="htype"><button data-htype="good" class="${F.type !== 'bad' ? 'on' : ''}">${ic('check_circle', 20)}<b>Bom</b><small>Quero fazer</small></button><button data-htype="bad" class="${F.type === 'bad' ? 'on' : ''}">${ic('block', 20)}<b>Ruim</b><small>Quero evitar</small></button></div>
+  <div class="lbl">Tipo</div><div class="htype"><button data-htype="good" class="${F.type !== 'bad' ? 'on' : ''}">${ic('check_circle', 20)}<b>Construir</b><small>Quero fazer</small></button><button data-htype="bad" class="${F.type === 'bad' ? 'on' : ''}">${ic('block', 20)}<b>Cortar</b><small>Quero evitar</small></button></div>
   <div class="lbl">Meta em dias</div><div class="hgoal">${HGOALS.map((g) => `<button class="chip${F.goal === g ? ' on' : ''}" data-hgoal="${g}">${g}</button>`).join('')}<div class="step"><button data-hstep="-1" aria-label="Menos um dia">${ic('remove', 18)}</button><b id="hgoalv">${F.goal}</b><button data-hstep="1" aria-label="Mais um dia">${ic('add', 18)}</button></div></div>
   <div class="lbl">Ícone</div><div class="icgrid">${HICONS.map((n) => `<button data-hic="${n}" class="${F.i === n ? 'on' : ''}" aria-label="${n}">${ic(n, 22)}</button>`).join('')}</div>
-  <div class="save-row">${F.id ? `<button class="del" data-delhab>${ic('delete', 18)}</button>` : ''}<button class="save" data-savehab>${F.id ? 'Salvar' : 'Criar hábito'}</button></div></div>`;
+  <div class="save-row">${F.id ? `<button class="del" data-delhab>${ic('remove_circle', 18)}</button>` : ''}<button class="save" data-savehab>${F.id ? 'Pronto' : 'Criar hábito'}</button></div></div>`;
 }
 function toggleHab(id, s) {
   const h = DB.habits.find((x) => x.id === id); if (!h) return;
@@ -513,14 +515,14 @@ function newForm(over = {}) {
 }
 function taskSheet() {
   const F = UI.form, A = area(F.a);
-  return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar tarefa' : 'Nova tarefa'}<button class="rbtn" data-closetask aria-label="Fechar">${ic('close', 18)}</button></h4>
+  return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar tarefa' : 'Anotar tarefa'}<button class="rbtn" data-closetask aria-label="Fechar">${ic('close', 18)}</button></h4>
   <input class="ttl" id="ttl" placeholder="O que precisa ser feito?" value="${esc(F.t)}" autocomplete="off" enterkeyhint="done">
-  <div class="dts"><button class="dt${F.date ? ' set' : ''}" data-pick="date">${ic('calendar_month', 18)}<span>${F.date ? fmtDate(F.date, true) : 'Data'}</span></button><button class="dt${F.time ? ' set' : ''}" data-pick="time">${ic('schedule', 18)}<span>${F.time || 'Hora'}</span>${F.time ? `<span class="x" data-clrtime>${ic('close', 16)}</span>` : ''}</button></div>
+  <div class="dts"><button class="dt${F.date ? ' set' : ''}" data-pick="date">${ic('calendar_month', 18)}<span>${F.date ? fmtDate(F.date, true) : 'Data'}</span></button><button class="dt${F.time ? ' set' : ''}" data-pick="time">${ic('hourglass_empty', 18)}<span>${F.time || 'Hora'}</span>${F.time ? `<span class="x" data-clrtime>${ic('close', 16)}</span>` : ''}</button></div>
   <div class="lbl">Área</div><div class="chips">${DB.areas.map((v) => `<button class="chip${v.k === F.a ? ' on' : ''}" data-farea="${v.k}">${ic(v.i, 16)}${esc(v.n)}</button>`).join('')}</div>
   ${A && A.subs.length ? `<div class="chips">${A.subs.map((s) => `<button class="chip sub${s === F.s ? ' on' : ''}" data-fsub="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
   <div class="lbl">Prioridade</div>
   <div class="mx"><span></span><span class="ax">Urgente</span><span class="ax">Não urgente</span><span class="ay">Importante</span>${[1, 2].map(qcell).join('')}<span class="ay">Não importante</span>${[3, 4].map(qcell).join('')}</div>
-  <div class="save-row">${F.id ? `<button class="del" data-deltask>${ic('delete', 18)}</button>` : ''}<button class="save" data-savetask>Salvar</button></div></div>`;
+  <div class="save-row">${F.id ? `<button class="del" data-deltask>${ic('remove_circle', 18)}</button>` : ''}<button class="save" data-savetask>Pronto</button></div></div>`;
 }
 const qcell = (q) => `<button class="qc q${q}${UI.form.q === q ? ' on' : ''}" data-q="${q}"><b>${Q[q].k}</b><small>${Q[q].d}</small></button>`;
 function readTitle() { const i = $('#ttl'); if (i && UI.form) UI.form.t = i.value; }
@@ -556,7 +558,7 @@ function calPop() {
   return `<div class="calh"><button data-cm="-1" aria-label="Mês anterior">${ic('chevron_left', 20)}</button><b>${MOF[m]} <span class="muted">${y}</span></b><button data-cm="1" aria-label="Próximo mês">${ic('chevron_right', 20)}</button></div>
   <div class="cal">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((x) => `<span class="wd">${x}</span>`).join('')}${cells}</div>
   <div class="quick"><button data-quick="0">Hoje</button><button data-quick="1">Amanhã</button><button data-quick="${k}">Próx. segunda</button></div>
-  <div class="pact"><button data-nodate>Sem data</button><button class="pri" data-pclose>Fechar</button></div>`;
+  <div class="pact"><button data-nodate>Sem prazo</button><button class="pri" data-pclose>Fechar</button></div>`;
 }
 /* hora em colunas que rolam */
 const HRS = [...Array(24).keys()], MINS = [0, 10, 20, 30, 40, 50], IH = 40;
@@ -589,7 +591,7 @@ function areaSheet() {
   <input class="ttl" id="aname" placeholder="Nome da área" value="${esc(F.n)}" autocomplete="off">
   <div class="lbl">Ícone</div><div class="icgrid">${ICONS.map((n) => `<button data-fai="${n}" class="${F.i === n ? 'on' : ''}" aria-label="${n}">${ic(n, 22)}</button>`).join('')}</div>
   <div class="lbl">Cor no gráfico</div><div class="clrs">${COLORS.map((c) => `<button data-fac="${c}" class="${F.c === c ? 'on' : ''}" style="--c:${c}" aria-label="Cor ${c}"></button>`).join('')}</div>
-  <div class="save-row">${F.k ? `<button class="del" data-delarea>${ic('delete', 18)}</button>` : ''}<button class="save" data-savearea>${F.k ? 'Salvar' : 'Criar área'}</button></div></div>`;
+  <div class="save-row">${F.k ? `<button class="del" data-delarea>${ic('remove_circle', 18)}</button>` : ''}<button class="save" data-savearea>${F.k ? 'Pronto' : 'Criar área'}</button></div></div>`;
 }
 function settingsSheet() {
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>Configurações<button class="rbtn" data-closeset aria-label="Fechar">${ic('close', 18)}</button></h4>
@@ -597,7 +599,7 @@ function settingsSheet() {
   <div class="set-row"><span>Tarefas guardadas</span><small>${DB.tasks.length}</small></div>
   ${syncSection()}
   <div class="set-row"><span>Versão</span><small>v${self.APP_VERSION}</small></div>
-  <div class="save-row"><button class="save" data-saveset>Salvar</button></div></div>`;
+  <div class="save-row"><button class="save" data-saveset>Pronto</button></div></div>`;
 }
 
 /* ---------- cliques ---------- */
@@ -681,7 +683,7 @@ APP.addEventListener('click', (e) => {
   if (c('[data-newtask]')) { openTask(newForm({ a: UI.det[0], s: UI.det[1] })); return; }
   if (c('[data-delpart]')) {
     const [k, s] = UI.det, used = DB.tasks.filter((t) => t.a === k && t.s === s).length;
-    askConfirm(`Excluir a parte ${s}?`, 'Excluir', () => { const a = area(k); a.subs = a.subs.filter((y) => y !== s); DB.tasks.forEach((t) => { if (t.a === k && t.s === s) t.s = ''; }); DB.notes = DB.notes.filter((n) => !(n.a === k && n.s === s)); save(); closeDetail(); renderAll(); toast(used ? 'Parte excluída. As tarefas continuam na área.' : 'Parte excluída.'); });
+    askConfirm(`Excluir a subárea ${s}?`, 'Excluir', () => { const a = area(k); a.subs = a.subs.filter((y) => y !== s); DB.tasks.forEach((t) => { if (t.a === k && t.s === s) t.s = ''; }); DB.notes = DB.notes.filter((n) => !(n.a === k && n.s === s)); save(); closeDetail(); renderAll(); toast(used ? 'Subárea excluída. As tarefas continuam na área.' : 'Subárea excluída.'); });
     return;
   }
   if ((x = c('[data-addp]'))) { UI.adding = x.dataset.addp; render('areas'); const i = $('#newpart'); if (i) i.focus(); return; }
@@ -711,8 +713,8 @@ APP.addEventListener('click', (e) => {
 function addPart(k) {
   const i = $('#newpart'), v = i && i.value.trim(); const a = area(k);
   if (!v) { UI.adding = null; render('areas'); return; }
-  if (a.subs.includes(v)) { toast('Essa parte já existe.'); return; }
-  a.subs.push(v); UI.adding = null; save(); render('areas'); toast('Parte criada.');
+  if (a.subs.includes(v)) { toast('Essa subárea já existe.'); return; }
+  a.subs.push(v); UI.adding = null; save(); render('areas'); toast('Subárea criada.');
 }
 function addNote() {
   const i = $('#newnote'), v = i && i.value.trim(); if (!v) return;
@@ -761,7 +763,7 @@ const SUPA_URL = 'https://ydfupdkaxtuczuhxbspq.supabase.co';
 const SUPA_KEY = 'sb_publishable_wmqbNAqI5GuqjzPAQyCdJg_tnGgKzKk';
 const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.99.1/dist/umd/supabase.js';
 const SYNC = { client: null, user: null, state: 'off', last: null, timer: null, busy: false, again: false };
-const SYNC_IC = { ok: ['cloud_done', 'Sincronizado'], sync: ['sync', 'Sincronizando…'], err: ['cloud_off', 'Não consegui sincronizar'], offline: ['cloud_off', 'Sem internet: salvo no aparelho'] };
+const SYNC_IC = { ok: ['cloud_sync', 'Sincronizado'], sync: ['sync', 'Sincronizando…'], err: ['cloud_off', 'Não consegui sincronizar'], offline: ['cloud_off', 'Sem internet: salvo no aparelho'] };
 function syncIcon() { const v = SYNC_IC[SYNC.state]; return v ? `<span class="syncic" data-syncic title="${v[1]}">${ic(v[0], 18)}</span>` : ''; }
 function setSync(st) {
   SYNC.state = st;

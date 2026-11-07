@@ -2,6 +2,17 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v10 — 2026-11-07
+- Nomes e ícones escolhidos item por item:
+  - Abas: **Foco**, **Planos**, **Caderno**, **Constância** e **Pulso** (ícones de Planos e Pulso novos); símbolo do Orbe novo.
+  - Ícones arredondados um pouco mais visíveis e a aba ativa fica preenchida.
+  - Seções: "Em foco agora", "Não esqueça", "Para amanhã", "Sem prazo" e "Desempenho".
+  - Botões: "Anotar tarefa", "+ Área", "Nova subárea", "+ Hábito" e "Pronto".
+  - Matriz: Faça, Planeje, Delegar e Solte. Hábitos: Construir e Cortar. Níveis: Poeira → Órbita.
+  - Pulso: Pontuais, Adiadas, Vencidas e Dias até concluir.
+  - Ícones novos de hora, editar, excluir, menu, feito, sincronizado, das áreas Profissional e Espiritual e das
+    subáreas Clientes, Projetos, Estudos, Saúde, Finanças e Leitura.
+
 ## v9 — 2026-11-07
 - Hábitos em **grade dia × hábito** (como o rastreador do bullet journal): cada linha é um hábito, cada coluna um dia,
   na semana ou no mês inteiro (rola para o lado e abre no dia de hoje). Toque no quadradinho para marcar.

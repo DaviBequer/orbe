@@ -7,6 +7,8 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
 900px vira layout de computador (menu lateral, duas colunas, janelas centralizadas, atalhos N e Esc).
 
 ## O que tem
+Abas (nome na tela → código): Foco → `home`, Planos → `agenda`, Caderno → `areas`, Constância → `habits`, Pulso → `stats`.
+Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Delegar / Solte; hábitos: Construir / Cortar.
 - **Hoje:** topo preto (saudação, progresso, 4 blocos da matriz de Eisenhower que filtram), "Próximo importante",
   tarefas de hoje e atrasadas por prioridade, amanhã (ou próximos dias) e sem data.
 - **Agenda:** Semana/Mês, hoje em preto na página da semana; no computador arrasta tarefa para outro dia.
@@ -21,7 +23,7 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 
-Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 200).
+Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 250; aba ativa preenchida).
 Dados em `localStorage['orbe.v1']`. Sincronização opcional com Supabase (fim do `app.js`: `SUPA_URL`/`SUPA_KEY`):
 login por e-mail e senha em Configurações; tabela `orbe_data(user_id, data jsonb, updated_at)` com RLS, uma linha por
 usuário com o documento inteiro. Cada item tem carimbo `u` (posto em `save()` por comparação) e exclusões ficam em
