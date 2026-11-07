@@ -442,6 +442,83 @@ button{font:inherit;color:inherit}
 .step button{width:34px;height:34px;border:0;border-radius:50%;background:var(--bg);display:grid;place-items:center;cursor:pointer}
 .step b{min-width:34px;text-align:center;font-weight:400;font-size:16px}
 
+/* ---------- ícones animados ---------- */
+.ic{width:var(--s,20px);height:var(--s,20px);overflow:visible;flex:none;display:inline-block;vertical-align:middle;--d:1.8s}
+.ic *{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transform-box:view-box}
+.ic .f{fill:currentColor;stroke:none}
+.ic .soft{opacity:.35}
+.ic .pg{fill:currentColor;fill-opacity:.07}
+.ic [pathLength]{stroke-dasharray:1}
+.ic:not(.run) .ao{opacity:0}
+.nav button.on .ic *{stroke-width:2}
+.tmeta .ic{--s:13px}
+.ck .ic{opacity:0;transform:scale(.4);transition:.25s cubic-bezier(.3,1.6,.5,1);color:#fff}
+.task.done .ck .ic{opacity:1;transform:none}
+.ck .ic *{stroke-width:2}
+.ms.fillnow{animation:o-fill 1.4s ease-out 1}
+@keyframes o-fill{0%{font-variation-settings:'FILL' 0,'wght' 250,'GRAD' 0,'opsz' 24}20%,60%{font-variation-settings:'FILL' 1,'wght' 250,'GRAD' 0,'opsz' 24}100%{font-variation-settings:'FILL' 0,'wght' 250,'GRAD' 0,'opsz' 24}}
+.ic.run *{animation-duration:var(--d);animation-timing-function:ease-in-out;animation-fill-mode:both;animation-iteration-count:1}
+/* Foco: porta abrindo */
+.i-foco .dr{transform-origin:10px 17px}
+.i-foco.run .dr{animation-name:o-door}
+@keyframes o-door{0%,8%{transform:scaleX(1)}26%,55%{transform:scaleX(.25)}75%,100%{transform:scaleX(1)}}
+/* Planos: escrevendo o plano */
+.i-planos.run .l1,.i-planos.run .l2,.i-planos.run .l3{animation-name:o-drw}
+.i-planos.run .l2{animation-delay:.22s}.i-planos.run .l3{animation-delay:.44s}
+@keyframes o-drw{0%{stroke-dashoffset:1}32%,100%{stroke-dashoffset:0}}
+@keyframes o-drwL{0%,10%{stroke-dashoffset:1}55%,100%{stroke-dashoffset:0}}
+/* Caderno: vento nas páginas */
+.i-caderno .pg{transform-origin:12px 12px}
+.i-caderno.run .pg{animation-name:o-flip}
+.i-caderno.run .q1{animation-delay:.07s}.i-caderno.run .q2{animation-delay:.14s}.i-caderno.run .q3{animation-delay:.21s}.i-caderno.run .q4{animation-delay:.28s}
+@keyframes o-flip{0%{transform:scaleX(1);opacity:1}18%,85%{transform:scaleX(-1);opacity:1}100%{transform:scaleX(-1);opacity:0}}
+/* Constância e Feito: caneta marcando */
+.i-constancia.run .c1,.i-constancia.run .c2,.i-constancia.run .c3,.i-feito.run .c1,.i-feito.run .c2{animation-name:o-drwL}
+.i-constancia.run .c2{animation-delay:.26s}.i-constancia.run .c3{animation-delay:.52s}
+.i-feito.run .c2{animation-delay:.26s}
+.i-constancia.run .pen{animation-name:o-penC}
+.i-feito.run .pen{animation-name:o-penD}
+@keyframes o-penC{0%{transform:translate(9px,3px);opacity:0}8%{opacity:1;transform:translate(8.6px,5.6px)}22%{transform:translate(8.6px,10.6px)}36%{transform:translate(8.6px,15.6px)}52%{transform:translate(9px,15.6px);opacity:1}62%,100%{transform:translate(12px,13px);opacity:0}}
+@keyframes o-penD{0%{transform:translate(2.5px,12.5px);opacity:0}6%{opacity:1}22%{transform:translate(6.5px,16.5px)}38%{transform:translate(14.5px,8.5px)}48%{transform:translate(12px,16.5px)}62%{transform:translate(20.5px,8px);opacity:1}72%,100%{transform:translate(21px,7px);opacity:0}}
+/* Pulso: traçando o batimento */
+.i-pulso.run .e{animation-name:o-drwL}
+/* Símbolo: lua em órbita */
+.i-logo .ob{transform-origin:12px 12px}
+.i-logo.run .ob{animation:o-orbit 2.6s linear 1 both}
+@keyframes o-orbit{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+/* Menu: onda */
+.i-menu.run .m1,.i-menu.run .m2,.i-menu.run .m3{animation-name:o-wave;animation-duration:1.4s}
+.i-menu.run .m2{animation-delay:.08s}.i-menu.run .m3{animation-delay:.16s}
+@keyframes o-wave{0%,40%,100%{transform:translateY(0)}12%{transform:translateY(-2px)}24%{transform:translateY(2px)}}
+/* Sincronizado: dados subindo */
+.i-sync.run .u1,.i-sync.run .u2,.i-sync.run .u3{animation-name:o-rise}
+.i-sync.run .u2{animation-delay:.15s}.i-sync.run .u3{animation-delay:.3s}
+@keyframes o-rise{0%,6%{transform:translateY(5px);opacity:0}18%{opacity:1}42%,100%{transform:translateY(-3px);opacity:0}}
+/* Data: folha arrancada */
+.i-data .tear{transform-origin:12px 5px}
+.i-data.run .tear{animation-name:o-tear}
+@keyframes o-tear{0%,6%{transform:translateY(0) rotate(0);opacity:1}30%{transform:translateY(7px) rotate(8deg);opacity:0}31%{transform:translateY(-6px) rotate(0);opacity:0}55%,100%{transform:translateY(0);opacity:1}}
+/* Hora: areia caindo */
+.i-hora .st{transform-origin:12px 9.6px}.i-hora .sb{transform-origin:12px 19.6px}
+.i-hora .sm{stroke-dasharray:.3 .7}
+.i-hora.run .st{animation-name:o-sandT}.i-hora.run .sb{animation-name:o-sandB}.i-hora.run .sm{animation-name:o-stream}
+@keyframes o-sandT{0%,8%{transform:scaleY(1)}70%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes o-sandB{0%,8%{transform:scaleY(.25)}70%,100%{transform:scaleY(1)}}
+@keyframes o-stream{0%,8%{stroke-dashoffset:1;opacity:1}40%{stroke-dashoffset:-1;opacity:1}70%,100%{stroke-dashoffset:-1;opacity:0}}
+/* Editar: assinatura */
+.i-editar.run .wl{animation-name:o-drwL;animation-timing-function:linear}
+.i-editar.run .pen{animation-name:o-penS}
+@keyframes o-penS{0%{transform:translate(-8px,1px);opacity:1}12%{transform:translate(-5px,-2px)}24%{transform:translate(-2px,2px)}36%{transform:translate(1px,-1px)}48%{transform:translate(4px,1px);opacity:1}58%,100%{transform:translate(4px,1px);opacity:0}}
+/* Adiada: pulando pro próximo dia */
+.i-adiada.run .dy{animation-name:o-hop}
+@keyframes o-hop{0%,6%{transform:translate(0,0)}22%{transform:translate(3px,-3px)}36%,100%{transform:translate(6px,0)}}
+/* Anotação: alfinete */
+.i-nota .nt{transform-origin:12px 4px}
+.i-nota.run .pi{animation-name:o-pin}.i-nota.run .nt{animation-name:o-jig}
+@keyframes o-pin{0%,4%{transform:translateY(-6px);opacity:0}16%{opacity:1}26%,100%{transform:translateY(0);opacity:1}}
+@keyframes o-jig{0%,24%,52%,100%{transform:rotate(0)}32%{transform:rotate(-4deg)}42%{transform:rotate(3deg)}}
+@media (prefers-reduced-motion:reduce){.ic.run *,.ms.fillnow{animation:none!important}}
+
 /* ---------- base das colunas (celular: tudo empilhado) ---------- */
 .nav .side-logo,.nav .side-new{display:none}
 .d-only{display:none!important}

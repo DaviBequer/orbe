@@ -2,6 +2,15 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v13 — 2026-11-07
+- **Ícones animados**, desenhados em partes (a animação mostra o que o ícone é):
+  - Abas: Foco (porta abrindo), Planos (escrevendo o plano), Caderno (vento nas páginas), Constância (caneta marcando
+    a lista) e Pulso (traçando o batimento) — animam ao tocar na aba.
+  - Símbolo do Orbe (lua em órbita, ao abrir), Menu (onda, ao tocar), Sincronizado (dados subindo, ao terminar de sincronizar).
+  - Feito (caneta marcando, ao concluir uma tarefa), Data (folha arrancada) e Hora (areia caindo) ao escolher na nova tarefa,
+    Editar (assinatura), Adiada (pulando pro próximo dia, quando a data muda) e Anotação (alfinete, ao anotar).
+  - Ícones das áreas e subáreas se preenchem ao abrir uma área no Caderno.
+
 ## v12 — 2026-11-07
 - **Nome da saudação por conta:** cada conta guarda o próprio nome. Ao trocar de conta, a saudação e o campo
   "Teu nome" mostram o nome daquela conta (conta nova começa sem nome).

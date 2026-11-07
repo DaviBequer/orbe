@@ -91,6 +91,33 @@ const UI = {
 /* ---------- utilidades ---------- */
 let toastT;
 function toast(msg) { const t = $('.toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
+
+/* ---------- ícones animados (desenhados em partes; a animação conta o que o ícone é) ---------- */
+const BOOK_L = 'M12 6.5C10 5 7 4.6 3.5 5v13c3.5-.4 6.5 0 8.5 1.5', BOOK_R = 'M12 6.5c2-1.5 5-1.9 8.5-1.5v13c-3.5-.4-6.5 0-8.5 1.5';
+const PAGE_R = 'M12 7c1.8-1.2 4.4-1.6 7.3-1.3v11.6c-2.9-.3-5.5.1-7.3 1.3z';
+const PEN = '<g class="pen ao"><path class="f" d="M0 0l5.5-5.5 1.8 1.8L1.8 1.8 0 2z"/></g>';
+const NOTE_P = '<path d="M5 4h14a1 1 0 0 1 1 1v9.5L14.5 20H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14.5 20v-4.5a1 1 0 0 1 1-1H20M8 9h8M8 12.5h5"/>';
+const DAYS = '<circle cx="8" cy="13.5" r=".9" class="f"/><circle cx="12" cy="13.5" r=".9" class="f"/><circle cx="16" cy="13.5" r=".9" class="f"/><circle cx="8" cy="17" r=".9" class="f"/><circle cx="12" cy="17" r=".9" class="f"/>';
+const SV = {
+  foco: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/><path class="dr f" d="M10 20v-5h4v5z"/>',
+  planos: '<rect x="4" y="5" width="16" height="15.5" rx="2"/><path d="M8 3v4M16 3v4"/><path class="l1" pathLength="1" d="M8 11h8"/><path class="l2" pathLength="1" d="M8 14h5.5"/><path class="l3" pathLength="1" d="M8 17h7"/>',
+  caderno: `<path d="${BOOK_L}"/><path d="${BOOK_R}"/><path d="M12 6.5v13"/>` + [0, 1, 2, 3, 4].map((i) => `<path class="q${i} ao pg" d="${PAGE_R}"/>`).join(''),
+  constancia: '<path d="M11.5 7h8.5M11.5 12h8.5M11.5 17h8.5"/><path class="c1" pathLength="1" d="M4 7l1.6 1.6L8.6 5.6"/><path class="c2" pathLength="1" d="M4 12l1.6 1.6 3-3"/><path class="c3" pathLength="1" d="M4 17l1.6 1.6 3-3"/>' + PEN,
+  pulso: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M9 20.5h6M12 16.5v4"/><path class="e" pathLength="1" d="M4.5 11H8l1.5-3 2.2 6.5 1.6-4.5 1 1.5H19.5"/>',
+  logo: '<circle cx="12" cy="12" r="7.5"/><g class="ob"><circle cx="12" cy="4.5" r="1.6" class="f"/></g>',
+  menu: '<path class="m1" d="M4 7h16"/><path class="m2" d="M4 12h16"/><path class="m3" d="M4 17h16"/>',
+  sync: '<path d="M7 18.5h10.5a4 4 0 0 0 .5-8 6 6 0 0 0-11.6 1.6A3.5 3.5 0 0 0 7 18.5z"/><circle class="u1 f ao" cx="10" cy="15.5" r=".9"/><circle class="u2 f ao" cx="12" cy="15.5" r=".9"/><circle class="u3 f ao" cx="14" cy="15.5" r=".9"/>',
+  feito: '<path class="c1" pathLength="1" d="M2.5 12.5l4 4L14.5 8.5"/><path class="c2" pathLength="1" d="M11.5 16l.5.5L20.5 8"/>' + PEN,
+  data: '<path d="M8 3v4M16 3v4"/><g class="tear"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17"/>' + DAYS + '</g>',
+  hora: '<path d="M6.5 3.5h11M6.5 20.5h11"/><path d="M8 3.5c0 4.2 4 5 4 8.5 0-3.5 4-4.3 4-8.5M8 20.5c0-4.2 4-5 4-8.5 0 3.5 4 4.3 4 8.5"/><path class="st f" d="M9.6 6.3h4.8L12 9.6z"/><path class="sb f" d="M9.4 19.6h5.2L12 16.4z"/><path class="sm ao" pathLength="1" d="M12 11v6"/>',
+  editar: '<path d="M6 15.5 15.5 6l2 2L8 17.5H6z" class="soft"/><path class="wl" pathLength="1" d="M3.5 21c1.6-2.6 2.6-3.4 3-2.2s-1.4 3 .5 2.4 2.2-3 3.1-2.3 0 2.6 1.4 2.2 1.8-1.6 3.1-1.2 1.4 1.1 2.9.8"/><g style="transform:translate(12px,19px)">' + PEN + '</g>',
+  adiada: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><circle cx="15" cy="14.5" r="1.4" class="soft f"/><circle class="dy f" cx="9" cy="14.5" r="1.4"/>',
+  nota: '<g class="nt">' + NOTE_P + '</g><g class="pi"><circle cx="12" cy="4" r="1.8" class="f"/></g>',
+};
+const svgi = (n, s = 20, run = false) => `<svg class="ic i-${n}${run ? ' run' : ''}" style="--s:${s}px" viewBox="0 0 24 24" aria-hidden="true">${SV[n]}</svg>`;
+function playIc(el) { if (!el) return; const svg = el.matches && el.matches('svg.ic') ? el : el.querySelector && el.querySelector('svg.ic'); if (!svg) return; svg.classList.remove('run'); void svg.getBoundingClientRect(); svg.classList.add('run'); }
+function playFill(el) { const m = el && el.querySelector('.ms'); if (!m) return; m.classList.remove('fillnow'); void m.offsetWidth; m.classList.add('fillnow'); }
+const TABI = { home: 'foco', agenda: 'planos', areas: 'caderno', habits: 'constancia', stats: 'pulso' };
 const mini = (q, s = 12) => `<svg class="mini q${q}" width="${s}" height="${s}" viewBox="0 0 14 14" aria-hidden="true">${[[0, 0], [8, 0], [0, 8], [8, 8]].map(([x, y], i) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="5.5" height="5.5" rx="1.4"${i === q - 1 ? ' class="f"' : ''}/>`).join('')}</svg>`;
 const byQ = (a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || a.q - b.q || ((a.time || '99') < (b.time || '99') ? -1 : 1);
 const sig = (t) => (t.done ? '×' : t.time ? '○' : '•');
@@ -99,11 +126,11 @@ const isLate = (t) => !t.done && t.date && t.date < today();
 function row(t) {
   const meta = [
     isLate(t) ? `<span class="late">${ic('history', 13)}vencida · ${fmtDate(t.date)}</span>` : '',
-    t.time ? `<span class="tm">${ic('hourglass_empty', 13)}${t.time}</span>` : '',
+    t.time ? `<span class="tm">${svgi('hora', 13)}${t.time}</span>` : '',
     `<span>${esc(areaName(t.a))}${t.s ? ' · ' + esc(t.s) : ''}</span>`,
-    t.hist && t.hist.length ? `<span class="rm">${ic('event_repeat', 13)}adiada ${t.hist.length}×</span>` : '',
+    t.hist && t.hist.length ? `<span class="rm">${svgi('adiada', 13, UI.animRem === t.id)}adiada ${t.hist.length}×</span>` : '',
   ].join('');
-  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${ic('done_all', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div></div></div>`;
+  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div></div></div>`;
 }
 
 /* ---------- HOJE ---------- */
@@ -122,11 +149,11 @@ function home() {
   const d = new Date();
   const now = pad(d.getHours()) + ':' + pad(d.getMinutes());
   const n = td.filter((t) => t.date === t0 && t.time && t.q <= 2 && !t.done && t.time >= now).sort((a, b) => (a.time < b.time ? -1 : 1))[0];
-  let h = `<div class="hero"><div class="logo">${ic('blur_circular', 18)}Orbe${syncIcon()}<button data-settings aria-label="Configurações">${ic('menu', 19)}</button></div>
+  let h = `<div class="hero"><div class="logo">${svgi('logo', 19)}Orbe${syncIcon()}<button data-settings aria-label="Configurações">${svgi('menu', 20)}</button></div>
     <h2>${greeting()}${DB.name ? ', ' + esc(DB.name) : ''}</h2><p>${WDF[d.getDay()][0].toUpperCase() + WDF[d.getDay()].slice(1)}, ${d.getDate()} de ${MOF[d.getMonth()].toLowerCase()} · ${pl(open, 'aberta', 'abertas')} hoje</p>
     <div class="pl"><span>Progresso de hoje</span><b>${done} de ${td.length}</b></div><div class="prog"><i style="width:${p}%"></i></div>
     <div class="ht">${[1, 2, 3, 4].map((q) => `<button class="q${q}${UI.qf === q ? ' on' : ''}" data-qf="${q}"><span class="tn">${mini(q)}<b>${cnt(q)}</b></span><small>${Q[q].s}</small></button>`).join('')}</div></div>`;
-  const nextH = n ? `<div class="next" data-id="${n.id}"><span class="ni">${ic('hourglass_empty', 22)}</span><div><small>Não esqueça</small><b>${n.time} · ${esc(n.t)}</b></div><span class="in">${inTxt(n.time)}</span></div>` : '';
+  const nextH = n ? `<div class="next" data-id="${n.id}"><span class="ni">${svgi('hora', 22)}</span><div><small>Não esqueça</small><b>${n.time} · ${esc(n.t)}</b></div><span class="in">${inTxt(n.time)}</span></div>` : '';
   h += nextH.replace('class="next"', 'class="next m-only"') + '<div class="cols"><div class="ca">';
   h += `<div class="sec-h">Em foco agora<small>${UI.qf ? 'filtrado · toque de novo para ver tudo' : pl(open, 'aberta', 'abertas')}</small></div>`;
   let any = false;
@@ -212,7 +239,7 @@ function areas() {
     h += `<div class="acc${UI.open.has(a.k) ? ' open' : ''}" data-acc="${a.k}"><button><span class="ai2" style="--c:${a.c}">${ic(a.i, 20)}</span><div><b>${esc(a.n)}</b><small>${pl(a.subs.length, 'subárea', 'subáreas')} · ${pl(op, 'aberta', 'abertas')} · ${pl(nts, 'anotação', 'anotações')}</small></div>${ic('chevron_right', 18).replace('class="ms"', 'class="ms chev"')}</button><div class="in"><div>
     ${a.subs.map((s) => { const o = DB.tasks.filter((t) => t.a === a.k && t.s === s && !t.done).length, nt = DB.notes.filter((n) => n.a === a.k && n.s === s).length; return `<div class="srow" data-det="${a.k}" data-sub="${esc(s)}"><span class="si">${ic(subIcon(s), 19)}</span><div><b>${esc(s)}</b><small>${pl(o, 'tarefa', 'tarefas')} · ${pl(nt, 'anotação', 'anotações')}</small></div>${ic('chevron_right', 16)}</div>`; }).join('')}
     ${UI.adding === a.k ? `<div class="addrow"><span class="si2">${ic('label', 18)}</span><input id="newpart" placeholder="Nome da subárea" aria-label="Nome da nova subárea" enterkeyhint="done"><button class="ok" data-okp="${a.k}" aria-label="Criar subárea">${ic('done_all', 16)}</button></div>` : `<button class="addrow" data-addp="${a.k}"><span class="si2">${ic('add', 18)}</span>Nova subárea em ${esc(a.n)}</button>`}
-    <div class="accedit"><button data-editarea="${a.k}">${ic('draw', 16)}Editar área</button></div>
+    <div class="accedit"><button data-editarea="${a.k}">${svgi('editar', 17)}Editar área</button></div>
     </div></div></div>`;
   });
   h += `<button class="newarea" data-newarea>${ic('add', 18)}Área</button>`;
@@ -226,9 +253,9 @@ function detail() {
   let h = `<div class="dhd"><button class="rbtn" data-back aria-label="Voltar">${ic('arrow_back', 20)}</button><small>Caderno › ${esc(a.n)}</small><button class="rbtn" data-delpart aria-label="Excluir subárea">${ic('remove_circle', 19)}</button></div>
   <div class="dtitle"><span class="si">${ic(subIcon(s), 24)}</span><div><h3>${esc(s)}</h3><p>${pl(open, 'tarefa aberta', 'tarefas abertas')} · ${pl(ns.length, 'anotação', 'anotações')}</p></div></div>
   <div class="seg" style="margin-top:10px">${[['tudo', 'Tudo'], ['tarefas', 'Tarefas'], ['notas', 'Anotações']].map(([v, l]) => `<button data-dtab="${v}" class="${tab === v ? 'on' : ''}">${l}</button>`).join('')}</div>
-  <div class="wr2"><textarea id="newnote" rows="1" placeholder="Escrever uma anotação…" aria-label="Nova anotação"></textarea><button data-addnote>${ic('draw', 16)}Anotar</button></div>`;
+  <div class="wr2"><textarea id="newnote" rows="1" placeholder="Escrever uma anotação…" aria-label="Nova anotação"></textarea><button data-addnote>${svgi('editar', 17)}Anotar</button></div>`;
   if (tab !== 'notas') h += `<div class="sec-h">Tarefas<small>por prioridade</small></div><div class="qgroup plain">${ts.map(row).join('') || '<p class="empty">Nenhuma tarefa aqui ainda.</p>'}</div>`;
-  if (tab !== 'tarefas') h += `<div class="sec-h">Anotações<small>${ns.length}</small></div><div>${ns.map((n) => `<div class="dnote">${ic('sticky_note_2', 18)}<span>${esc(n.t).replace(/\n/g, '<br>')}<small>${fmtDate(n.at.slice(0, 10))}</small></span><button class="rm" data-delnote="${n.id}" aria-label="Apagar anotação">${ic('close', 16)}</button></div>`).join('') || '<p class="empty">Nada anotado ainda.</p>'}</div>`;
+  if (tab !== 'tarefas') h += `<div class="sec-h">Anotações<small>${ns.length}</small></div><div>${ns.map((n) => `<div class="dnote">${svgi('nota', 19, UI.animNote === n.id)}<span>${esc(n.t).replace(/\n/g, '<br>')}<small>${fmtDate(n.at.slice(0, 10))}</small></span><button class="rm" data-delnote="${n.id}" aria-label="Apagar anotação">${ic('close', 16)}</button></div>`).join('') || '<p class="empty">Nada anotado ainda.</p>'}</div>`;
   h += `<div class="dacts"><button data-newtask>${ic('task_alt', 18)}Anotar tarefa em ${esc(s)}</button></div>`;
   return h;
 }
@@ -443,6 +470,7 @@ function renderDet(keep = true) { const el = $('.detail'); const sc = el.scrollT
 function go(tab) {
   UI.tab = tab;
   $$('.nav button').forEach((b) => b.classList.toggle('on', b.dataset.go === tab));
+  playIc($(`.nav [data-go="${tab}"]`));
   $$('.screen').forEach((s) => s.classList.toggle('on', s.dataset.s === tab));
   closeDetail();
   render(tab, false);
@@ -523,7 +551,7 @@ function taskSheet() {
   const F = UI.form, A = area(F.a);
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar tarefa' : 'Anotar tarefa'}<button class="rbtn" data-closetask aria-label="Fechar">${ic('close', 18)}</button></h4>
   <input class="ttl" id="ttl" placeholder="O que precisa ser feito?" value="${esc(F.t)}" autocomplete="off" enterkeyhint="done">
-  <div class="dts"><button class="dt${F.date ? ' set' : ''}" data-pick="date">${ic('calendar_month', 18)}<span>${F.date ? fmtDate(F.date, true) : 'Data'}</span></button><button class="dt${F.time ? ' set' : ''}" data-pick="time">${ic('hourglass_empty', 18)}<span>${F.time || 'Hora'}</span>${F.time ? `<span class="x" data-clrtime>${ic('close', 16)}</span>` : ''}</button></div>
+  <div class="dts"><button class="dt${F.date ? ' set' : ''}" data-pick="date">${svgi('data', 19, UI.animPick === 'date')}<span>${F.date ? fmtDate(F.date, true) : 'Data'}</span></button><button class="dt${F.time ? ' set' : ''}" data-pick="time">${svgi('hora', 19, UI.animPick === 'time')}<span>${F.time || 'Hora'}</span>${F.time ? `<span class="x" data-clrtime>${ic('close', 16)}</span>` : ''}</button></div>
   <div class="lbl">Área</div><div class="chips">${DB.areas.map((v) => `<button class="chip${v.k === F.a ? ' on' : ''}" data-farea="${v.k}">${ic(v.i, 16)}${esc(v.n)}</button>`).join('')}</div>
   ${A && A.subs.length ? `<div class="chips">${A.subs.map((s) => `<button class="chip sub${s === F.s ? ' on' : ''}" data-fsub="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
   <div class="lbl">Prioridade</div>
@@ -532,11 +560,12 @@ function taskSheet() {
 }
 const qcell = (q) => `<button class="qc q${q}${UI.form.q === q ? ' on' : ''}" data-q="${q}"><b>${Q[q].k}</b><small>${Q[q].d}</small></button>`;
 function readTitle() { const i = $('#ttl'); if (i && UI.form) UI.form.t = i.value; }
-function rerenderTask() { readTitle(); $('[data-sh="task"]').innerHTML = taskSheet(); }
+function rerenderTask(pick) { readTitle(); UI.animPick = pick || null; $('[data-sh="task"]').innerHTML = taskSheet(); UI.animPick = null; }
 function openTask(form) { UI.form = form; openSheet('task', taskSheet()); }
 function setDate(t, newDate) {
   if (t.date === newDate) return;
-  if (t.date && !t.done) { t.hist = t.hist || []; t.hist.push({ from: t.date, to: newDate, at: new Date().toISOString() }); }
+  if (t.date && !t.done) {
+    UI.animRem = t.id; setTimeout(() => { if (UI.animRem === t.id) UI.animRem = null; }, 2500); t.hist = t.hist || []; t.hist.push({ from: t.date, to: newDate, at: new Date().toISOString() }); }
   if (!t.orig && t.date) t.orig = t.date;
   t.date = newDate;
 }
@@ -619,11 +648,11 @@ APP.addEventListener('click', (e) => {
   const c = (s) => e.target.closest(s); let x;
   // janelinhas
   if ((x = c('[data-cm]'))) { UI.cm = new Date(UI.cm.getFullYear(), UI.cm.getMonth() + +x.dataset.cm, 1); $('.pop .pc').innerHTML = calPop(); return; }
-  if ((x = c('[data-cd]'))) { UI.form.date = x.dataset.cd; closePop(); rerenderTask(); return; }
-  if ((x = c('[data-quick]'))) { UI.form.date = addDays(today(), +x.dataset.quick); closePop(); rerenderTask(); return; }
+  if ((x = c('[data-cd]'))) { UI.form.date = x.dataset.cd; closePop(); rerenderTask('date'); return; }
+  if ((x = c('[data-quick]'))) { UI.form.date = addDays(today(), +x.dataset.quick); closePop(); rerenderTask('date'); return; }
   if (c('[data-nodate]')) { UI.form.date = null; closePop(); rerenderTask(); return; }
   if (c('[data-notime]')) { UI.form.time = null; closePop(); rerenderTask(); return; }
-  if (c('[data-tset]')) { const w = $$('.pop .wheel'); UI.form.time = pad(HRS[wIdx(w[0])]) + ':' + pad(MINS[wIdx(w[1])]); closePop(); rerenderTask(); return; }
+  if (c('[data-tset]')) { const w = $$('.pop .wheel'); UI.form.time = pad(HRS[wIdx(w[0])]) + ':' + pad(MINS[wIdx(w[1])]); closePop(); rerenderTask('time'); return; }
   if ((x = c('.wheel [data-wi]'))) { x.parentNode.scrollTo({ top: +x.dataset.wi * IH, behavior: 'smooth' }); return; }
   if (c('[data-confirm]')) { const cb = confirmCb; confirmCb = null; closePop(); if (cb) setTimeout(cb, 50); return; }
   if (c('.pbd') || c('[data-pclose]')) { closePop(); return; }
@@ -667,14 +696,15 @@ APP.addEventListener('click', (e) => {
     else if (UI.tab === 'agenda') over.date = UI.sel;
     openTask(newForm(over)); return;
   }
-  if (c('[data-settings]')) { openSheet('set', settingsSheet()); return; }
+  if ((x = c('[data-settings]'))) { playIc(x); setTimeout(() => openSheet('set', settingsSheet()), 220); return; }
   // tarefas
   if ((x = c('.ck'))) {
     const r = x.closest('[data-id]'), t = DB.tasks.find((y) => y.id === r.dataset.id); if (!t) return;
     t.done = !t.done; t.doneAt = t.done ? new Date().toISOString() : null; save();
     $$(`.task[data-id="${t.id}"]`).forEach((y) => y.classList.toggle('done', t.done));
     if (t.done && navigator.vibrate) navigator.vibrate(12);
-    setTimeout(renderAll, 480); return;
+    if (t.done) playIc(x);
+    setTimeout(renderAll, t.done ? 1300 : 480); return;
   }
   if ((x = c('.task[data-id], .next[data-id], .sp p[data-id]'))) {
     const t = DB.tasks.find((y) => y.id === x.dataset.id); if (!t) return;
@@ -689,11 +719,11 @@ APP.addEventListener('click', (e) => {
   if ((x = c('.sp[data-day]'))) { UI.sel = x.dataset.day; render('agenda'); return; }
   if ((x = c('[data-sview]'))) { UI.sview = x.dataset.sview; render('stats'); return; }
   // vida
-  if ((x = c('[data-acc]>button'))) { const k = x.parentNode.dataset.acc; UI.open.has(k) ? UI.open.delete(k) : UI.open.add(k); x.parentNode.classList.toggle('open'); return; }
+  if ((x = c('[data-acc]>button'))) { const k = x.parentNode.dataset.acc; UI.open.has(k) ? UI.open.delete(k) : UI.open.add(k); x.parentNode.classList.toggle('open'); if (UI.open.has(k)) { playFill(x); x.parentNode.querySelectorAll('.srow').forEach((r, i) => setTimeout(() => playFill(r), 120 + i * 90)); } return; }
   if ((x = c('[data-det]'))) { openDetail(x.dataset.det, x.dataset.sub); return; }
   if (c('[data-back]')) { closeDetail(); return; }
   if ((x = c('[data-dtab]'))) { UI.dtab = x.dataset.dtab; renderDet(); return; }
-  if (c('[data-addnote]')) { addNote(); return; }
+  if ((x = c('[data-addnote]'))) { playIc(x); addNote(); return; }
   if ((x = c('[data-delnote]'))) { const id = x.dataset.delnote; askConfirm('Apagar esta anotação?', 'Apagar', () => { DB.notes = DB.notes.filter((n) => n.id !== id); save(); renderDet(); render('areas'); }); return; }
   if (c('[data-newtask]')) { openTask(newForm({ a: UI.det[0], s: UI.det[1] })); return; }
   if (c('[data-delpart]')) {
@@ -723,7 +753,7 @@ APP.addEventListener('click', (e) => {
   }
   if (c('[data-delhab]')) { const id = UI.habForm.id; askConfirm('Excluir este hábito?', 'Excluir', () => { DB.habits = DB.habits.filter((y) => y.id !== id); save(); closeSheet('habit'); render('habits'); render('home'); toast('Hábito excluído.'); }); return; }
   if (c('[data-newarea]')) { UI.areaForm = { k: null, n: '', i: 'fitness_center', c: COLORS[(DB.areas.length + 3) % COLORS.length] }; openSheet('area', areaSheet()); return; }
-  if ((x = c('[data-editarea]'))) { const a = area(x.dataset.editarea); UI.areaForm = { k: a.k, n: a.n, i: a.i, c: a.c }; openSheet('area', areaSheet()); return; }
+  if ((x = c('[data-editarea]'))) { playIc(x); const a = area(x.dataset.editarea); UI.areaForm = { k: a.k, n: a.n, i: a.i, c: a.c }; openSheet('area', areaSheet()); return; }
 });
 function addPart(k) {
   const i = $('#newpart'), v = i && i.value.trim(); const a = area(k);
@@ -733,7 +763,8 @@ function addPart(k) {
 }
 function addNote() {
   const i = $('#newnote'), v = i && i.value.trim(); if (!v) return;
-  DB.notes.push({ id: uid(), a: UI.det[0], s: UI.det[1], t: v, at: new Date().toISOString() });
+  const nid = uid(); UI.animNote = nid; setTimeout(() => { if (UI.animNote === nid) UI.animNote = null; }, 2500);
+  DB.notes.push({ id: nid, a: UI.det[0], s: UI.det[1], t: v, at: new Date().toISOString() });
   save(); UI.dtab = UI.dtab === 'tarefas' ? 'tudo' : UI.dtab; renderDet(); render('areas'); toast('Anotação salva.');
 }
 document.addEventListener('keydown', (e) => {
@@ -779,12 +810,13 @@ const SUPA_KEY = 'sb_publishable_wmqbNAqI5GuqjzPAQyCdJg_tnGgKzKk';
 const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.99.1/dist/umd/supabase.js';
 const SYNC = { client: null, user: null, state: 'off', last: null, timer: null, busy: false, again: false };
 const SYNC_IC = { ok: ['cloud_sync', 'Sincronizado'], sync: ['sync', 'Sincronizando…'], err: ['cloud_off', 'Não consegui sincronizar'], offline: ['cloud_off', 'Sem internet: salvo no aparelho'] };
-function syncIcon() { const v = SYNC_IC[SYNC.state]; return v ? `<span class="syncic" data-syncic title="${v[1]}">${ic(v[0], 18)}</span>` : ''; }
+function syncIcon(run) { const v = SYNC_IC[SYNC.state]; return v ? `<span class="syncic" data-syncic title="${v[1]}">${SYNC.state === 'ok' ? svgi('sync', 19, run) : ic(v[0], 18)}</span>` : ''; }
 function setSync(st) {
+  const wasSync = SYNC.state === 'sync';
   SYNC.state = st;
   $$('[data-syncic]').forEach((el) => el.remove());
   const logo = $('[data-s="home"] .logo'); const btn = logo && logo.querySelector('[data-settings]');
-  if (btn && SYNC_IC[st]) btn.insertAdjacentHTML('beforebegin', syncIcon());
+  if (btn && SYNC_IC[st]) btn.insertAdjacentHTML('beforebegin', syncIcon(st === 'ok' && wasSync));
   const last = $('[data-synclast]'); if (last && SYNC.last) last.textContent = agoTxt(SYNC.last);
 }
 function agoTxt(t) { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.round(m / 60)} h`; }
@@ -911,6 +943,9 @@ if (SUPA_URL && SUPA_KEY) {
   setInterval(() => { if (!document.hidden) sync(); }, 60000);
 }
 
+$$('.nav [data-go]').forEach((b) => { const m = b.querySelector('.ms'); if (m) m.outerHTML = svgi(TABI[b.dataset.go], 23); });
+{ const sl = $('.side-logo .ms'); if (sl) sl.outerHTML = svgi('logo', 21, true); }
 renderAll();
 restoreUI();
+setTimeout(() => playIc($('[data-s="home"] .logo')), 350);
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

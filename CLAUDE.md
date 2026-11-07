@@ -23,7 +23,9 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Delegar
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 
-Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 250; aba ativa preenchida).
+Visual: preto, branco e petróleo (#0F5463), fonte Outfit fina, ícones Material Symbols Rounded (peso 250).
+Ícones animados: desenhos SVG em partes em `SV` (app.js) + `svgi(nome)`; `playIc(el)` recoloca a classe `run`; animações `.i-<nome>.run`
+no styles.css (abas, logo, menu, sync, feito, data, hora, editar, adiada, nota). Áreas/subáreas: `playFill` (FILL do Material).
 Dados em `localStorage['orbe.v1']`. Sincronização opcional com Supabase (fim do `app.js`: `SUPA_URL`/`SUPA_KEY`):
 login por e-mail e senha em Configurações; tabela `orbe_data(user_id, data jsonb, updated_at)` com RLS, uma linha por
 usuário com o documento inteiro. Cada item tem carimbo `u` (posto em `save()` por comparação) e exclusões ficam em
