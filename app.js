@@ -123,14 +123,19 @@ const byQ = (a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || a.q - b.q || ((a.ti
 const sig = (t) => (t.done ? '×' : t.time ? '○' : '•');
 const isLate = (t) => !t.done && t.date && t.date < today();
 
+// Subtarefas ficam em t.st = [{id, t, done, doneAt}]. Nas contas, cada uma vale como uma tarefa com a
+// mesma prioridade, data, área e histórico da tarefa principal.
+const units = (list) => list.flatMap((t) => [t, ...(t.st || []).map((x) => ({ ...t, id: t.id + ':' + x.id, t: x.t, done: !!x.done, doneAt: x.doneAt || null, st: [] }))]);
 function row(t) {
   const meta = [
     isLate(t) ? `<span class="late">${ic('history', 13)}vencida · ${fmtDate(t.date)}</span>` : '',
     t.time ? `<span class="tm">${svgi('hora', 13)}${t.time}</span>` : '',
     `<span>${esc(areaName(t.a))}${t.s ? ' · ' + esc(t.s) : ''}</span>`,
     t.hist && t.hist.length ? `<span class="rm">${svgi('adiada', 13, UI.animRem === t.id)}adiada ${t.hist.length}×</span>` : '',
+    t.st && t.st.length ? `<span class="stc">${ic('checklist', 13)}${t.st.filter((x) => x.done).length}/${t.st.length}</span>` : '',
   ].join('');
-  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div></div></div>`;
+  const subl = t.st && t.st.length && !t.done ? `<div class="subl">${t.st.map((x) => `<button class="sub-it${x.done ? ' done' : ''}" data-stid="${x.id}" data-tid="${t.id}" aria-pressed="${!!x.done}"><span class="sck"></span><span class="stt">${esc(x.t)}</span></button>`).join('')}</div>` : '';
+  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div>${subl}</div></div>`;
 }
 
 /* ---------- HOJE ---------- */
@@ -144,14 +149,14 @@ function inTxt(time) {
 function home() {
   const t0 = today();
   const td = DB.tasks.filter((t) => t.date === t0 || isLate(t) || (t.done && t.doneAt && t.doneAt.slice(0, 10) === t0 && t.date && t.date < t0)).sort(byQ);
-  const done = td.filter((t) => t.done).length, open = td.length - done, p = td.length ? Math.round((done / td.length) * 100) : 0;
+  const done = td.filter((t) => t.done).length, open = td.length - done, tu = units(td), udone = tu.filter((t) => t.done).length, p = tu.length ? Math.round((udone / tu.length) * 100) : 0;
   const cnt = (q) => td.filter((t) => t.q === q && !t.done).length;
   const d = new Date();
   const now = pad(d.getHours()) + ':' + pad(d.getMinutes());
   const n = td.filter((t) => t.date === t0 && t.time && t.q <= 2 && !t.done && t.time >= now).sort((a, b) => (a.time < b.time ? -1 : 1))[0];
   let h = `<div class="hero"><div class="logo">${svgi('logo', 19)}Orbe${syncIcon()}<button data-settings aria-label="Configurações">${svgi('menu', 20)}</button></div>
     <h2>${greeting()}${DB.name ? ', ' + esc(DB.name) : ''}</h2><p>${WDF[d.getDay()][0].toUpperCase() + WDF[d.getDay()].slice(1)}, ${d.getDate()} de ${MOF[d.getMonth()].toLowerCase()} · ${pl(open, 'aberta', 'abertas')} hoje</p>
-    <div class="pl"><span>Progresso de hoje</span><b>${done} de ${td.length}</b></div><div class="prog"><i style="width:${p}%"></i></div>
+    <div class="pl"><span>Progresso de hoje</span><b>${udone} de ${tu.length}</b></div><div class="prog"><i style="width:${p}%"></i></div>
     <div class="ht">${[1, 2, 3, 4].map((q) => `<button class="q${q}${UI.qf === q ? ' on' : ''}" data-qf="${q}"><span class="tn">${mini(q)}<b>${cnt(q)}</b></span><small>${Q[q].s}</small></button>`).join('')}</div></div>`;
   const nextH = n ? `<div class="next" data-id="${n.id}"><span class="ni">${svgi('hora', 22)}</span><div><small>Não esqueça</small><b>${n.time} · ${esc(n.t)}</b></div><span class="in">${inTxt(n.time)}</span></div>` : '';
   h += nextH.replace('class="next"', 'class="next m-only"') + '<div class="cols"><div class="ca">';
@@ -270,7 +275,7 @@ function period(kind, offset = 0) {
 const due = (t) => t.orig || t.date;
 function measure(a, b) {
   const t0 = today();
-  const inP = DB.tasks.filter((t) => due(t) && due(t) >= a && due(t) <= b);
+  const inP = units(DB.tasks).filter((t) => due(t) && due(t) >= a && due(t) <= b);
   const cons = inP.filter((t) => t.done || due(t) <= t0 || (t.date && t.date <= t0));
   const onTime = cons.filter((t) => t.done && (!t.hist || !t.hist.length) && t.doneAt && t.doneAt.slice(0, 10) <= due(t)).length;
   const rem = cons.filter((t) => t.hist && t.hist.length).length;
@@ -545,13 +550,14 @@ function askConfirm(msg, okLabel, cb, sub = 'Isso não pode ser desfeito.', canc
 function newForm(over = {}) {
   const a = over.a || (DB.areas[0] && DB.areas[0].k) || '';
   const ar = area(a);
-  return Object.assign({ id: null, t: '', a, s: ar && ar.subs[0] ? ar.subs[0] : '', q: 2, date: today(), time: null }, over);
+  return Object.assign({ id: null, t: '', a, s: ar && ar.subs[0] ? ar.subs[0] : '', q: 2, date: today(), time: null, st: [] }, over);
 }
 function taskSheet() {
   const F = UI.form, A = area(F.a);
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar tarefa' : 'Anotar tarefa'}<button class="rbtn" data-closetask aria-label="Fechar">${ic('close', 18)}</button></h4>
   <input class="ttl" id="ttl" placeholder="O que precisa ser feito?" value="${esc(F.t)}" autocomplete="off" enterkeyhint="done">
   <div class="dts"><button class="dt${F.date ? ' set' : ''}" data-pick="date">${svgi('data', 19, UI.animPick === 'date')}<span>${F.date ? fmtDate(F.date, true) : 'Data'}</span></button><button class="dt${F.time ? ' set' : ''}" data-pick="time">${svgi('hora', 19, UI.animPick === 'time')}<span>${F.time || 'Hora'}</span>${F.time ? `<span class="x" data-clrtime>${ic('close', 16)}</span>` : ''}</button></div>
+  <div class="lbl">Subtarefas</div><div class="fsubs">${(F.st || []).map((x) => `<div class="fsub${x.done ? ' done' : ''}"><button class="sck" data-fstdone="${x.id}" aria-label="${x.done ? 'Desmarcar' : 'Concluir'} subtarefa"></button><span class="stt">${esc(x.t)}</span><button class="rbtn sm" data-fstdel="${x.id}" aria-label="Tirar subtarefa">${ic('close', 15)}</button></div>`).join('')}<div class="fsub add"><span class="sck ghost">${ic('add', 14)}</span><input id="newst" placeholder="Adicionar subtarefa" autocomplete="off" enterkeyhint="next" aria-label="Nova subtarefa"><button class="rbtn sm" data-fstadd aria-label="Adicionar subtarefa">${ic('add', 16)}</button></div></div>
   <div class="lbl">Área</div><div class="chips">${DB.areas.map((v) => `<button class="chip${v.k === F.a ? ' on' : ''}" data-farea="${v.k}">${ic(v.i, 16)}${esc(v.n)}</button>`).join('')}</div>
   ${A && A.subs.length ? `<div class="chips">${A.subs.map((s) => `<button class="chip sub${s === F.s ? ' on' : ''}" data-fsub="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
   <div class="lbl">Prioridade</div>
@@ -569,16 +575,22 @@ function setDate(t, newDate) {
   if (!t.orig && t.date) t.orig = t.date;
   t.date = newDate;
 }
+function addSubForm() {
+  const i = $('#newst'), v = i && i.value.trim(); if (!v) { if (i) i.focus(); return; }
+  readTitle(); UI.form.st = UI.form.st || []; UI.form.st.push({ id: uid(), t: v, done: false, doneAt: null }); rerenderTask();
+  const n = $('#newst'); if (n) n.focus();
+}
 function saveTask() {
+  { const i = $('#newst'); if (i && i.value.trim()) addSubForm(); }
   readTitle();
   const F = UI.form, title = F.t.trim();
   if (!title) { toast('Escreva o que precisa ser feito.'); $('#ttl').focus(); return; }
   if (F.id) {
     const t = DB.tasks.find((x) => x.id === F.id); if (!t) return;
-    setDate(t, F.date); Object.assign(t, { t: title, a: F.a, s: F.s, q: F.q, time: F.time });
+    setDate(t, F.date); Object.assign(t, { t: title, a: F.a, s: F.s, q: F.q, time: F.time, st: (F.st || []).map((x) => ({ ...x })) });
     toast('Tarefa atualizada.');
   } else {
-    DB.tasks.push({ id: uid(), t: title, a: F.a, s: F.s, q: F.q, date: F.date, time: F.time, done: false, doneAt: null, created: new Date().toISOString(), hist: [] });
+    DB.tasks.push({ id: uid(), t: title, a: F.a, s: F.s, q: F.q, date: F.date, time: F.time, done: false, doneAt: null, created: new Date().toISOString(), hist: [], st: (F.st || []).map((x) => ({ ...x })) });
     toast('Tarefa criada.');
   }
   save(); closeSheet('task'); renderAll();
@@ -700,15 +712,29 @@ APP.addEventListener('click', (e) => {
   // tarefas
   if ((x = c('.ck'))) {
     const r = x.closest('[data-id]'), t = DB.tasks.find((y) => y.id === r.dataset.id); if (!t) return;
-    t.done = !t.done; t.doneAt = t.done ? new Date().toISOString() : null; save();
+    t.done = !t.done; t.doneAt = t.done ? new Date().toISOString() : null;
+    if (t.done && t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
+    save();
     $$(`.task[data-id="${t.id}"]`).forEach((y) => y.classList.toggle('done', t.done));
     if (t.done && navigator.vibrate) navigator.vibrate(12);
     if (t.done) playIc(x);
     setTimeout(renderAll, t.done ? 1300 : 480); return;
   }
+  if ((x = c('.sub-it'))) {
+    const t = DB.tasks.find((y) => y.id === x.dataset.tid), sub = t && (t.st || []).find((y) => y.id === x.dataset.stid); if (!sub) return;
+    sub.done = !sub.done; sub.doneAt = sub.done ? new Date().toISOString() : null;
+    x.classList.toggle('done', sub.done); x.setAttribute('aria-pressed', sub.done);
+    if (sub.done && navigator.vibrate) navigator.vibrate(8);
+    const left = t.st.filter((y) => !y.done).length;
+    if (sub.done && !left) toast('Todas as subtarefas feitas. Toque no círculo para concluir a tarefa.');
+    save(); setTimeout(renderAll, 500); return;
+  }
+  if ((x = c('[data-fstdone]'))) { readTitle(); const sub = UI.form.st.find((y) => y.id === x.dataset.fstdone); if (sub) { sub.done = !sub.done; sub.doneAt = sub.done ? new Date().toISOString() : null; } rerenderTask(); return; }
+  if ((x = c('[data-fstdel]'))) { readTitle(); UI.form.st = UI.form.st.filter((y) => y.id !== x.dataset.fstdel); rerenderTask(); return; }
+  if (c('[data-fstadd]')) { addSubForm(); return; }
   if ((x = c('.task[data-id], .next[data-id], .sp p[data-id]'))) {
     const t = DB.tasks.find((y) => y.id === x.dataset.id); if (!t) return;
-    openTask({ id: t.id, t: t.t, a: t.a, s: t.s, q: t.q, date: t.date, time: t.time }); return;
+    openTask({ id: t.id, t: t.t, a: t.a, s: t.s, q: t.q, date: t.date, time: t.time, st: (t.st || []).map((x) => ({ ...x })) }); return;
   }
   if ((x = c('[data-qf]'))) { const q = +x.dataset.qf; UI.qf = UI.qf === q ? 0 : q; render('home'); return; }
   // agenda
@@ -776,6 +802,7 @@ APP.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   if (e.target.id === 'newpart') { e.preventDefault(); addPart(UI.adding); }
   if (e.target.id === 'ttl') { e.preventDefault(); e.target.blur(); }
+  if (e.target.id === 'newst') { e.preventDefault(); addSubForm(); }
   if (e.target.id === 'newnote' && !e.shiftKey && matchMedia('(pointer:fine)').matches) { e.preventDefault(); addNote(); }
 });
 APP.addEventListener('input', (e) => { if (e.target.id === 'newnote') { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; } });

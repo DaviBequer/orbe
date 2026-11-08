@@ -519,6 +519,26 @@ button{font:inherit;color:inherit}
 @keyframes o-jig{0%,24%,52%,100%{transform:rotate(0)}32%{transform:rotate(-4deg)}42%{transform:rotate(3deg)}}
 @media (prefers-reduced-motion:reduce){.ic.run *,.ms.fillnow{animation:none!important}}
 
+/* subtarefas */
+.tmeta .stc{color:var(--ink)}
+.subl{display:flex;flex-direction:column;margin-top:6px}
+.sub-it{display:flex;gap:9px;align-items:center;background:none;border:0;padding:5px 0;font:inherit;font-size:13.5px;font-weight:300;color:var(--ink);text-align:left;cursor:pointer}
+.sck{width:17px;height:17px;border-radius:50%;border:1.25px solid var(--muted);flex:none;display:grid;place-items:center;background:transparent;padding:0;cursor:pointer;color:var(--muted);transition:background .2s,border-color .2s}
+.sck::after{content:"";width:4px;height:7px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-.5px,-1px) scale(.4);opacity:0;transition:.25s cubic-bezier(.3,1.6,.5,1)}
+.done>.sck,.sub-it.done .sck{background:var(--ink);border-color:var(--ink)}
+.done>.sck::after,.sub-it.done .sck::after{opacity:1;transform:rotate(45deg) translate(-.5px,-1px) scale(1)}
+.sub-it.done .stt,.fsub.done .stt{color:var(--muted);text-decoration:line-through}
+.fsubs{display:flex;flex-direction:column;background:var(--soft);border-radius:14px;padding:2px 12px}
+.fsub{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--sep);min-height:44px}
+.fsub:first-child{border-top:0}
+.fsub .stt{flex:1;min-width:0;font-size:14.5px;word-break:break-word}
+.fsub input{flex:1;min-width:0;font:inherit;font-size:14.5px;font-weight:300;border:0;background:transparent;outline:none;color:var(--ink);padding:4px 0}
+.fsub input::placeholder{color:var(--muted)}
+.sck.ghost{border-style:dashed;cursor:default}
+.sck.ghost::after{display:none}
+.sck.ghost .ms{--s:12px}
+.rbtn.sm{width:30px;height:30px;background:var(--bg)}
+
 /* ---------- base das colunas (celular: tudo empilhado) ---------- */
 .nav .side-logo,.nav .side-new{display:none}
 .d-only{display:none!important}

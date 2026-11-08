@@ -2,6 +2,12 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v14 — 2026-11-08
+- **Subtarefas:** na tarefa, adicione, marque e tire subtarefas. Elas aparecem embaixo da tarefa no Foco, nos Planos
+  e no Caderno, e dá para marcar direto na lista. Concluir a tarefa marca as subtarefas que faltavam.
+- Nas métricas (Pulso, progresso do dia), **cada subtarefa conta como uma tarefa** com a mesma prioridade, data e
+  área da tarefa principal.
+
 ## v13 — 2026-11-07
 - **Ícones animados**, desenhados em partes (a animação mostra o que o ícone é):
   - Abas: Foco (porta abrindo), Planos (escrevendo o plano), Caderno (vento nas páginas), Constância (caneta marcando

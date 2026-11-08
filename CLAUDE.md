@@ -20,6 +20,8 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Delegar
   horário) e 10 níveis; "Hábitos de hoje" no Hoje.
 - **Números:** no dia certo, remarcadas, atrasadas, tempo até fazer, gráfico de linha, matriz, as que mais voltam, por área.
 - Mudar a data de uma tarefa conta como remarcada (`hist`).
+- Subtarefas em `t.st` = [{id, t, done, doneAt}]. `units()` transforma cada subtarefa numa tarefa com a mesma prioridade,
+  data, área e histórico da principal; `measure()` (Pulso) e o progresso do dia contam por unidades.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 
