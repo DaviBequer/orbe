@@ -648,6 +648,7 @@ function settingsSheet() {
   ${acc}
   <div class="lbl">Teu nome na saudação${SYNC.user ? ' (desta conta)' : ''}</div><input class="ttl" id="uname" value="${esc(DB.name)}" placeholder="Teu nome" autocomplete="off">
   <div class="set-row"><span>Tarefas guardadas</span><small>${DB.tasks.length}</small></div>
+  <div class="set-row"><span>${ic('content_paste', 20)}<span>Colar tarefas e hábitos<small style="display:block">texto pronto, montado com o Claude</small></span></span><button class="del" data-openimp>Colar</button></div>
   <div class="set-row"><span>Versão</span><small>v${self.APP_VERSION}</small></div>
   <div class="save-row"><button class="save" data-saveset>Pronto</button></div></div>`;
 }
@@ -698,6 +699,15 @@ APP.addEventListener('click', (e) => {
   if (c('[data-clearacc]')) { askConfirm('Apagar todos os dados desta conta?', 'Apagar', clearAccount, 'Tarefas, anotações, áreas e hábitos desta conta somem aqui e nos outros aparelhos dela.'); return; }
   if (c('[data-syncnow]')) { sync(true); return; }
   if (c('[data-openacc]')) { openSheet('acc', accSheet()); return; }
+  if (c('[data-openimp]')) { openSheet('imp', impSheet()); setTimeout(() => $('#imptext') && $('#imptext').focus(), 350); return; }
+  if (c('[data-sh="imp"] .bd') || c('[data-closeimp]')) { closeSheet('imp'); return; }
+  if (c('[data-impcheck]')) { impPreview(); return; }
+  if (c('[data-impgo]')) {
+    impPreview(); if (!IMP || !IMP.items.length) return;
+    const k = applyImport(IMP.items); IMP = null; closeSheet('imp'); closeSheet('set'); go('home');
+    toast(`Adicionado: ${pl(k.task, 'tarefa', 'tarefas')}, ${pl(k.habit, 'hábito', 'hábitos')}${k.skip ? ` (${k.skip} já existia${k.skip > 1 ? 'm' : ''})` : ''}.`);
+    return;
+  }
   if (c('[data-sh="acc"] .bd') || c('[data-closeacc]')) { closeSheet('acc'); return; }
   if (c('[data-saveset]')) { DB.name = $('#uname').value.trim(); save(); closeSheet('set'); render('home'); return; }
   // navegação
@@ -805,7 +815,8 @@ APP.addEventListener('keydown', (e) => {
   if (e.target.id === 'newst') { e.preventDefault(); addSubForm(); }
   if (e.target.id === 'newnote' && !e.shiftKey && matchMedia('(pointer:fine)').matches) { e.preventDefault(); addNote(); }
 });
-APP.addEventListener('input', (e) => { if (e.target.id === 'newnote') { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; } });
+APP.addEventListener('input', (e) => {
+  if (e.target.id === 'imptext') { clearTimeout(IMP_T); IMP_T = setTimeout(impPreview, 350); } if (e.target.id === 'newnote') { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; } });
 
 /* dica no gráfico */
 APP.addEventListener('pointermove', (e) => {
@@ -949,6 +960,112 @@ async function clearAccount() {
     toast(error ? 'Apaguei aqui, mas não consegui enviar. Toque em Sincronizar agora.' : 'Dados desta conta apagados.');
   } else toast('Dados apagados deste aparelho.');
   refreshSet(true);
+}
+
+/* ---------- colar tarefas e hábitos (texto pronto) ----------
+   Uma linha por item, campos separados por "|":
+   TAREFA | título | Área > Subárea | Faça/Planeje/Delegar/Solte | data | hora
+     - subtarefa (linhas começando com "-" logo abaixo da tarefa)
+   HABITO | nome | Construir/Cortar | meta em dias
+   AREA | nome            SUBAREA | Área > nome            NOTA | Área > Subárea | texto
+   Linhas com # são comentários. */
+const norm = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const QWORDS = { faca: 1, fazer: 1, 'fazer agora': 1, urgente: 1, '1': 1, planeje: 2, planejar: 2, agendar: 2, '2': 2, delegar: 3, delegue: 3, '3': 3, solte: 4, eliminar: 4, '4': 4 };
+const WDN = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+function parseDate(v) {
+  const x = norm(v).replace(/-feira/, '');
+  if (!x || x === 'sem data' || x === 'sem prazo' || x === '-') return { ok: true, d: null };
+  if (x === 'hoje') return { ok: true, d: today() };
+  if (x === 'amanha') return { ok: true, d: addDays(today(), 1) };
+  if (x === 'depois de amanha') return { ok: true, d: addDays(today(), 2) };
+  const w = WDN.indexOf(x); if (w >= 0) { let k = 1; while (parse(addDays(today(), k)).getDay() !== w) k++; return { ok: true, d: addDays(today(), k) }; }
+  let m = x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/); if (m) return { ok: true, d: ymd(new Date(+m[1], +m[2] - 1, +m[3])) };
+  m = x.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (m) { const t0 = parse(today()); let y = m[3] ? +m[3] : t0.getFullYear(); if (y < 100) y += 2000; let d = new Date(y, +m[2] - 1, +m[1]); if (!m[3] && ymd(d) < addDays(today(), -30)) d = new Date(y + 1, +m[2] - 1, +m[1]); return { ok: true, d: ymd(d) }; }
+  return { ok: false };
+}
+function parseImport(text) {
+  const items = [], errors = []; let last = null;
+  String(text || '').split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim(); if (!line || line.startsWith('#')) return;
+    if (/^[-•*]\s*/.test(line)) { const t = line.replace(/^[-•*]\s*/, '').trim(); if (last && t) last.st.push(t); else errors.push(`Linha ${i + 1}: subtarefa sem tarefa acima.`); return; }
+    const f = line.split('|').map((x) => x.trim()), kind = norm(f[0]);
+    if (kind === 'tarefa') {
+      if (!f[1]) { errors.push(`Linha ${i + 1}: tarefa sem título.`); return; }
+      const [an, sn] = (f[2] || '').split('>').map((x) => x.trim());
+      const q = f[3] ? QWORDS[norm(f[3])] : 2; if (f[3] && !q) errors.push(`Linha ${i + 1}: prioridade "${f[3]}" não reconhecida, ficou Planeje.`);
+      const dt = parseDate(f[4]); if (!dt.ok) errors.push(`Linha ${i + 1}: data "${f[4]}" não reconhecida, ficou sem prazo.`);
+      const tm = (f[5] || '').match(/^(\d{1,2})[:h](\d{2})?$/i);
+      last = { kind: 'task', t: f[1], area: an || '', sub: sn || '', q: q || 2, date: dt.ok ? dt.d : null, time: tm ? pad(+tm[1]) + ':' + pad(+(tm[2] || 0)) : null, st: [] };
+      items.push(last); return;
+    }
+    last = null;
+    if (kind === 'habito') {
+      if (!f[1]) { errors.push(`Linha ${i + 1}: hábito sem nome.`); return; }
+      const ty = norm(f[2]); const bad = /cortar|ruim|evitar|parar/.test(ty);
+      items.push({ kind: 'habit', n: f[1], type: bad ? 'bad' : 'good', goal: Math.max(1, Math.min(365, parseInt(f[3], 10) || 66)) }); return;
+    }
+    if (kind === 'area') { if (f[1]) items.push({ kind: 'area', n: f[1] }); return; }
+    if (kind === 'subarea') { const [an, sn] = (f[1] || '').split('>').map((x) => x.trim()); if (an && sn) items.push({ kind: 'sub', area: an, sub: sn }); else errors.push(`Linha ${i + 1}: use SUBAREA | Área > Nome.`); return; }
+    if (kind === 'nota') { const [an, sn] = (f[1] || '').split('>').map((x) => x.trim()); if (an && sn && f[2]) items.push({ kind: 'note', area: an, sub: sn, t: f.slice(2).join(' | ') }); else errors.push(`Linha ${i + 1}: use NOTA | Área > Subárea | texto.`); return; }
+    errors.push(`Linha ${i + 1}: não entendi "${line.slice(0, 40)}".`);
+  });
+  return { items, errors };
+}
+function findArea(name, create) {
+  if (!name) return null;
+  let a = DB.areas.find((x) => norm(x.n) === norm(name));
+  if (!a && create) { a = { k: 'a' + uid(), n: name, i: 'label', c: COLORS[DB.areas.length % COLORS.length], subs: [] }; DB.areas.push(a); }
+  return a;
+}
+function findSub(a, name) {
+  if (!a || !name) return '';
+  const s = a.subs.find((x) => norm(x) === norm(name)); if (s) return s;
+  a.subs.push(name); return name;
+}
+function applyImport(items) {
+  const c = { task: 0, habit: 0, area: 0, sub: 0, note: 0, skip: 0 }, now = new Date().toISOString();
+  items.forEach((it) => {
+    if (it.kind === 'area') { if (!findArea(it.n)) { findArea(it.n, true); c.area++; } return; }
+    if (it.kind === 'sub') { const a = findArea(it.area, true), had = a.subs.some((x) => norm(x) === norm(it.sub)); findSub(a, it.sub); if (!had) c.sub++; return; }
+    if (it.kind === 'habit') { if (DB.habits.some((h) => norm(h.n) === norm(it.n))) { c.skip++; return; } DB.habits.push({ id: uid(), n: it.n, type: it.type, i: it.type === 'bad' ? 'block' : 'check_circle', goal: it.goal, created: now, days: {} }); c.habit++; return; }
+    if (it.kind === 'note') { const a = findArea(it.area, true), sb = findSub(a, it.sub); DB.notes.push({ id: uid(), a: a.k, s: sb, t: it.t, at: now }); c.note++; return; }
+    if (it.kind === 'task') {
+      if (DB.tasks.some((t) => norm(t.t) === norm(it.t) && (t.date || null) === it.date && !t.done)) { c.skip++; return; }
+      const a = findArea(it.area, true) || DB.areas[0], sb = a && it.sub ? findSub(a, it.sub) : '';
+      DB.tasks.push({ id: uid(), t: it.t, a: a ? a.k : '', s: sb, q: it.q, date: it.date, time: it.time, done: false, doneAt: null, created: now, hist: [], st: it.st.map((x) => ({ id: uid(), t: x, done: false, doneAt: null })) });
+      c.task++;
+    }
+  });
+  save(); renderAll();
+  return c;
+}
+function impSheet() {
+  return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>Colar tarefas e hábitos<button class="rbtn" data-closeimp aria-label="Fechar">${ic('close', 18)}</button></h4>
+  <p class="hint">Cole aqui o texto que o Claude montou. Toque em Conferir para ver o que vai entrar antes de adicionar.</p>
+  <textarea class="imp" id="imptext" rows="9" placeholder="TAREFA | Enviar proposta | Profissional > Clientes | Faça | amanhã | 14:00&#10;  - Revisar números&#10;HABITO | Ler 10 páginas | Construir | 66"></textarea>
+  <div id="impprev"></div>
+  <div class="save-row"><button class="del" data-impcheck>Conferir</button><button class="save" data-impgo disabled>Adicionar ao app</button></div>
+  <details class="hhow"><summary>${ic('info', 18)}Como escrever (se quiser fazer à mão)</summary><div>
+  <p><b>TAREFA</b> | título | Área &gt; Subárea | Faça, Planeje, Delegar ou Solte | data | hora</p>
+  <p>Data: hoje, amanhã, segunda… domingo, 15/11 ou deixe vazio para sem prazo. Hora: 14:00 ou vazio.</p>
+  <p>Subtarefas: linhas começando com "-" logo abaixo da tarefa.</p>
+  <p><b>HABITO</b> | nome | Construir ou Cortar | meta em dias</p>
+  <p><b>AREA</b> | nome · <b>SUBAREA</b> | Área &gt; nome · <b>NOTA</b> | Área &gt; Subárea | texto</p>
+  <p>Áreas e subáreas que ainda não existem são criadas. Tarefa ou hábito com o mesmo nome que já existe não é repetido.</p></div></details></div>`;
+}
+let IMP = null, IMP_T = null;
+function impPreview() {
+  const r = parseImport($('#imptext').value); IMP = r;
+  const n = (k) => r.items.filter((x) => x.kind === k).length, qn = (q) => r.items.filter((x) => x.kind === 'task' && x.q === q).length;
+  const sts = r.items.filter((x) => x.kind === 'task').reduce((a, t) => a + t.st.length, 0);
+  let h = '';
+  if (!r.items.length && !r.errors.length) h = '<p class="hint">Nada para adicionar ainda.</p>';
+  if (r.items.length) h += `<div class="impsum"><b>${pl(n('task'), 'tarefa', 'tarefas')}</b>${sts ? ` com ${pl(sts, 'subtarefa', 'subtarefas')}` : ''} · <b>${pl(n('habit'), 'hábito', 'hábitos')}</b>${n('area') ? ` · ${pl(n('area'), 'área', 'áreas')}` : ''}${n('sub') ? ` · ${pl(n('sub'), 'subárea', 'subáreas')}` : ''}${n('note') ? ` · ${pl(n('note'), 'anotação', 'anotações')}` : ''}<small>${[1, 2, 3, 4].map((q) => `${Q[q].k}: ${qn(q)}`).join(' · ')}</small></div>
+    <div class="implist">${r.items.filter((x) => x.kind === 'task' || x.kind === 'habit').slice(0, 40).map((x) => x.kind === 'task' ? `<div>${mini(x.q)}<span>${esc(x.t)}<small>${esc(x.area || areaName(DB.areas[0] && DB.areas[0].k))}${x.sub ? ' · ' + esc(x.sub) : ''} · ${x.date ? fmtDate(x.date, true) : 'sem prazo'}${x.time ? ' · ' + x.time : ''}${x.st.length ? ` · ${x.st.length} subtarefas` : ''}</small></span></div>` : `<div>${ic(x.type === 'bad' ? 'block' : 'check_circle', 14)}<span>${esc(x.n)}<small>${x.type === 'bad' ? 'Cortar' : 'Construir'} · meta de ${x.goal} dias</small></span></div>`).join('')}</div>`;
+  if (r.errors.length) h += `<div class="imperr">${r.errors.slice(0, 8).map((e) => `<p>${esc(e)}</p>`).join('')}</div>`;
+  $('#impprev').innerHTML = h;
+  $('[data-impgo]').disabled = !r.items.length;
 }
 function initSync() {
   if (!SUPA_URL || !SUPA_KEY || !window.supabase) return;

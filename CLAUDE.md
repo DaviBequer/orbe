@@ -22,6 +22,10 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Delegar
 - Mudar a data de uma tarefa conta como remarcada (`hist`).
 - Subtarefas em `t.st` = [{id, t, done, doneAt}]. `units()` transforma cada subtarefa numa tarefa com a mesma prioridade,
   data, área e histórico da principal; `measure()` (Pulso) e o progresso do dia contam por unidades.
+- Colar texto (☰ → Colar, `parseImport`/`applyImport`): uma linha por item, campos com "|":
+  `TAREFA | título | Área > Subárea | Faça/Planeje/Delegar/Solte | data (hoje, amanhã, sexta, 15/11, vazio) | hora`,
+  linhas "- " abaixo = subtarefas; `HABITO | nome | Construir/Cortar | meta`; `AREA | nome`; `SUBAREA | Área > nome`;
+  `NOTA | Área > Subárea | texto`; "#" = comentário. Cria áreas/subáreas que faltam; não duplica tarefa/hábito igual.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 

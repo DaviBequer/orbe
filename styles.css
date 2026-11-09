@@ -539,6 +539,20 @@ button{font:inherit;color:inherit}
 .sck.ghost .ms{--s:12px}
 .rbtn.sm{width:30px;height:30px;background:var(--bg)}
 
+/* colar tarefas */
+textarea.imp{font:inherit;font-family:var(--mono);font-size:12.5px;line-height:1.5;width:100%;min-height:180px;border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--soft);color:var(--ink);resize:vertical;outline:none}
+textarea.imp:focus{border-color:var(--ink)}
+.impsum{font-size:14px;background:var(--soft);border-radius:14px;padding:10px 12px}
+.impsum small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.implist{display:flex;flex-direction:column;max-height:240px;overflow-y:auto;margin-top:8px}
+.implist div{display:flex;gap:10px;align-items:flex-start;padding:7px 2px;border-top:1px solid var(--line);font-size:13.5px}
+.implist div:first-child{border-top:0}
+.implist .mini,.implist .ms{margin-top:3px}
+.implist small{display:block;color:var(--muted);font-size:11.5px}
+.imperr{margin-top:8px;font-size:12.5px;color:var(--accent)}
+.imperr p{margin:2px 0}
+.save-row button[disabled]{opacity:.4;cursor:default}
+
 /* ---------- base das colunas (celular: tudo empilhado) ---------- */
 .nav .side-logo,.nav .side-new{display:none}
 .d-only{display:none!important}

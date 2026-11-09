@@ -2,6 +2,11 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v15 — 2026-11-09
+- **Colar tarefas e hábitos** (☰ → Colar): cole um texto pronto (montado com o Claude) e o app cria as tarefas com
+  área, subárea, prioridade, data, hora e subtarefas, além de hábitos, áreas, subáreas e anotações. Mostra a prévia
+  antes de adicionar, avisa o que não entendeu e não repete o que já existe.
+
 ## v14 — 2026-11-08
 - **Subtarefas:** na tarefa, adicione, marque e tire subtarefas. Elas aparecem embaixo da tarefa no Foco, nos Planos
   e no Caderno, e dá para marcar direto na lista. Concluir a tarefa marca as subtarefas que faltavam.
