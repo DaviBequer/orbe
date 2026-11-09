@@ -8,7 +8,7 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
 
 ## O que tem
 Abas (nome na tela → código): Foco → `home`, Planos → `agenda`, Caderno → `areas`, Constância → `habits`, Pulso → `stats`.
-Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Delegar / Solte; hábitos: Construir / Cortar.
+Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva rápido / Quando der (antes Delegar/Solte; o colar ainda aceita os nomes antigos); hábitos: Construir / Cortar.
 - **Hoje:** topo preto (saudação, progresso, 4 blocos da matriz de Eisenhower que filtram), "Próximo importante",
   tarefas de hoje e atrasadas por prioridade, amanhã (ou próximos dias) e sem data.
 - **Agenda:** Semana/Mês, hoje em preto na página da semana; no computador arrasta tarefa para outro dia.
@@ -23,7 +23,7 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Delegar
 - Subtarefas em `t.st` = [{id, t, done, doneAt}]. `units()` transforma cada subtarefa numa tarefa com a mesma prioridade,
   data, área e histórico da principal; `measure()` (Pulso) e o progresso do dia contam por unidades.
 - Colar texto (☰ → Colar, `parseImport`/`applyImport`): uma linha por item, campos com "|":
-  `TAREFA | título | Área > Subárea | Faça/Planeje/Delegar/Solte | data (hoje, amanhã, sexta, 15/11, vazio) | hora`,
+  `TAREFA | título | Área > Subárea | Faça/Planeje/Resolva rápido/Quando der | data (hoje, amanhã, sexta, 15/11, vazio) | hora`,
   linhas "- " abaixo = subtarefas; `HABITO | nome | Construir/Cortar | meta`; `AREA | nome`; `SUBAREA | Área > nome`;
   `NOTA | Área > Subárea | texto`; "#" = comentário. Cria áreas/subáreas que faltam; não duplica tarefa/hábito igual.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro

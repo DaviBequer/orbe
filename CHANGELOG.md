@@ -2,6 +2,11 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v16 — 2026-11-09
+- Matriz com nomes para quem organiza só a própria vida: **Faça** (urgente e importante), **Planeje** (importante,
+  sem pressa), **Resolva rápido** (urgente, pouco importante: faça logo, sem gastar muito tempo) e **Quando der**
+  (nem urgente, nem importante: só se sobrar tempo). As tarefas que já existem continuam no mesmo quadrante.
+
 ## v15 — 2026-11-09
 - **Colar tarefas e hábitos** (☰ → Colar): cole um texto pronto (montado com o Claude) e o app cria as tarefas com
   área, subárea, prioridade, data, hora e subtarefas, além de hábitos, áreas, subáreas e anotações. Mostra a prévia

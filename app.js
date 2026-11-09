@@ -37,7 +37,7 @@ function fmtDate(s, long) {
 }
 
 /* ---------- dados ---------- */
-const Q = { 1: { k: 'Faça', d: 'Urgente e importante', s: 'Faça' }, 2: { k: 'Planeje', d: 'Importante, sem pressa', s: 'Planeje' }, 3: { k: 'Delegar', d: 'Urgente, pouco importante', s: 'Delegar' }, 4: { k: 'Solte', d: 'Nem urgente, nem importante', s: 'Solte' } };
+const Q = { 1: { k: 'Faça', d: 'Urgente e importante', s: 'Faça' }, 2: { k: 'Planeje', d: 'Importante, sem pressa', s: 'Planeje' }, 3: { k: 'Resolva rápido', d: 'Urgente, pouco importante', s: 'Rápido' }, 4: { k: 'Quando der', d: 'Nem urgente, nem importante', s: 'Quando der' } };
 const SUBI = { Clientes: 'groups', Projetos: 'account_tree', Estudos: 'history_edu', Saúde: 'ecg_heart', Casa: 'cottage', Finanças: 'attach_money', Leitura: 'auto_stories', Oração: 'volunteer_activism', Igreja: 'church' };
 const ICONS = ['business_center', 'person', 'wb_twilight', 'work', 'self_improvement', 'fitness_center', 'family_restroom', 'savings', 'school', 'palette', 'rocket_launch', 'volunteer_activism', 'travel_explore', 'eco', 'favorite', 'home', 'menu_book', 'church', 'sports_soccer', 'music_note'];
 const COLORS = ['#111214', '#0F5463', '#7A7D82', '#3F7F8C', '#5B5F66', '#A3A7AC'];
@@ -964,13 +964,13 @@ async function clearAccount() {
 
 /* ---------- colar tarefas e hábitos (texto pronto) ----------
    Uma linha por item, campos separados por "|":
-   TAREFA | título | Área > Subárea | Faça/Planeje/Delegar/Solte | data | hora
+   TAREFA | título | Área > Subárea | Faça/Planeje/Resolva rápido/Quando der | data | hora
      - subtarefa (linhas começando com "-" logo abaixo da tarefa)
    HABITO | nome | Construir/Cortar | meta em dias
    AREA | nome            SUBAREA | Área > nome            NOTA | Área > Subárea | texto
    Linhas com # são comentários. */
 const norm = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-const QWORDS = { faca: 1, fazer: 1, 'fazer agora': 1, urgente: 1, '1': 1, planeje: 2, planejar: 2, agendar: 2, '2': 2, delegar: 3, delegue: 3, '3': 3, solte: 4, eliminar: 4, '4': 4 };
+const QWORDS = { faca: 1, fazer: 1, 'fazer agora': 1, urgente: 1, '1': 1, planeje: 2, planejar: 2, agendar: 2, '2': 2, delegar: 3, delegue: 3, 'resolva rapido': 3, rapido: 3, resolva: 3, '3': 3, solte: 4, eliminar: 4, 'quando der': 4, talvez: 4, '4': 4 };
 const WDN = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 function parseDate(v) {
   const x = norm(v).replace(/-feira/, '');
@@ -1047,7 +1047,7 @@ function impSheet() {
   <div id="impprev"></div>
   <div class="save-row"><button class="del" data-impcheck>Conferir</button><button class="save" data-impgo disabled>Adicionar ao app</button></div>
   <details class="hhow"><summary>${ic('info', 18)}Como escrever (se quiser fazer à mão)</summary><div>
-  <p><b>TAREFA</b> | título | Área &gt; Subárea | Faça, Planeje, Delegar ou Solte | data | hora</p>
+  <p><b>TAREFA</b> | título | Área &gt; Subárea | Faça, Planeje, Resolva rápido ou Quando der | data | hora</p>
   <p>Data: hoje, amanhã, segunda… domingo, 15/11 ou deixe vazio para sem prazo. Hora: 14:00 ou vazio.</p>
   <p>Subtarefas: linhas começando com "-" logo abaixo da tarefa.</p>
   <p><b>HABITO</b> | nome | Construir ou Cortar | meta em dias</p>
