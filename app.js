@@ -1031,7 +1031,7 @@ function applyImport(items) {
     if (it.kind === 'area') { if (!findArea(it.n)) { findArea(it.n, true); c.area++; } return; }
     if (it.kind === 'sub') { const a = findArea(it.area, true), had = a.subs.some((x) => norm(x) === norm(it.sub)); findSub(a, it.sub); if (!had) c.sub++; return; }
     if (it.kind === 'habit') { if (DB.habits.some((h) => norm(h.n) === norm(it.n))) { c.skip++; return; } DB.habits.push({ id: uid(), n: it.n, type: it.type, i: it.type === 'bad' ? 'block' : 'check_circle', goal: it.goal, created: now, days: {} }); c.habit++; return; }
-    if (it.kind === 'note') { const a = findArea(it.area, true), sb = findSub(a, it.sub); DB.notes.push({ id: uid(), a: a.k, s: sb, t: it.t, at: now }); c.note++; return; }
+    if (it.kind === 'note') { const a = findArea(it.area, true), sb = findSub(a, it.sub); if (DB.notes.some((n) => n.a === a.k && norm(n.t) === norm(it.t))) { c.skip++; return; } DB.notes.push({ id: uid(), a: a.k, s: sb, t: it.t, at: now }); c.note++; return; }
     if (it.kind === 'del') { const n0 = DB.tasks.length; DB.tasks = DB.tasks.filter((t) => t.done || norm(t.t) !== norm(it.t)); c.del += n0 - DB.tasks.length; return; }
     if (it.kind === 'task') {
       // tarefa aberta com o mesmo nome: atualiza o que veio no texto (correção, não conta como adiada)

@@ -2,6 +2,9 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v18 — 2026-11-09
+- Colar não repete anotação que já existe com o mesmo texto na mesma área.
+
 ## v17 — 2026-11-09
 - **Colar corrige:** se já existe uma tarefa aberta com o mesmo nome, colar de novo **atualiza** a área, a prioridade,
   a data e a hora (e acrescenta subtarefas novas), sem duplicar e sem contar como adiada. A prévia mostra "atualiza".
