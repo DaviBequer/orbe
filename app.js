@@ -705,7 +705,7 @@ APP.addEventListener('click', (e) => {
   if (c('[data-impgo]')) {
     impPreview(); if (!IMP || !IMP.items.length) return;
     const k = applyImport(IMP.items); IMP = null; closeSheet('imp'); closeSheet('set'); go('home');
-    toast(`Adicionado: ${pl(k.task, 'tarefa', 'tarefas')}, ${pl(k.habit, 'hábito', 'hábitos')}${k.skip ? ` (${k.skip} já existia${k.skip > 1 ? 'm' : ''})` : ''}.`);
+    toast([k.task || !k.upd ? `${pl(k.task, 'tarefa nova', 'tarefas novas')}` : '', k.upd ? `${pl(k.upd, 'atualizada', 'atualizadas')}` : '', k.del ? `${pl(k.del, 'apagada', 'apagadas')}` : '', k.habit ? `${pl(k.habit, 'hábito', 'hábitos')}` : ''].filter(Boolean).join(', ') + (k.skip ? ` (${k.skip} já existia${k.skip > 1 ? 'm' : ''})` : '') + '.');
     return;
   }
   if (c('[data-sh="acc"] .bd') || c('[data-closeacc]')) { closeSheet('acc'); return; }
@@ -968,6 +968,7 @@ async function clearAccount() {
      - subtarefa (linhas começando com "-" logo abaixo da tarefa)
    HABITO | nome | Construir/Cortar | meta em dias
    AREA | nome            SUBAREA | Área > nome            NOTA | Área > Subárea | texto
+   APAGAR | título  (tarefa aberta com o mesmo nome de um TAREFA é atualizada, não repetida)
    Linhas com # são comentários. */
 const norm = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const QWORDS = { faca: 1, fazer: 1, 'fazer agora': 1, urgente: 1, '1': 1, planeje: 2, planejar: 2, agendar: 2, '2': 2, delegar: 3, delegue: 3, 'resolva rapido': 3, rapido: 3, resolva: 3, '3': 3, solte: 4, eliminar: 4, 'quando der': 4, talvez: 4, '4': 4 };
@@ -996,7 +997,7 @@ function parseImport(text) {
       const q = f[3] ? QWORDS[norm(f[3])] : 2; if (f[3] && !q) errors.push(`Linha ${i + 1}: prioridade "${f[3]}" não reconhecida, ficou Planeje.`);
       const dt = parseDate(f[4]); if (!dt.ok) errors.push(`Linha ${i + 1}: data "${f[4]}" não reconhecida, ficou sem prazo.`);
       const tm = (f[5] || '').match(/^(\d{1,2})[:h](\d{2})?$/i);
-      last = { kind: 'task', t: f[1], area: an || '', sub: sn || '', q: q || 2, date: dt.ok ? dt.d : null, time: tm ? pad(+tm[1]) + ':' + pad(+(tm[2] || 0)) : null, st: [] };
+      last = { kind: 'task', t: f[1], area: an || '', sub: sn || '', q: q || 2, date: dt.ok ? dt.d : null, time: tm ? pad(+tm[1]) + ':' + pad(+(tm[2] || 0)) : null, st: [], given: { area: !!f[2], q: !!q, date: f.length > 4 && dt.ok, time: f.length > 5 } };
       items.push(last); return;
     }
     last = null;
@@ -1006,6 +1007,7 @@ function parseImport(text) {
       items.push({ kind: 'habit', n: f[1], type: bad ? 'bad' : 'good', goal: Math.max(1, Math.min(365, parseInt(f[3], 10) || 66)) }); return;
     }
     if (kind === 'area') { if (f[1]) items.push({ kind: 'area', n: f[1] }); return; }
+    if (kind === 'apagar') { if (f[1]) items.push({ kind: 'del', t: f[1] }); else errors.push(`Linha ${i + 1}: use APAGAR | título da tarefa.`); return; }
     if (kind === 'subarea') { const [an, sn] = (f[1] || '').split('>').map((x) => x.trim()); if (an && sn) items.push({ kind: 'sub', area: an, sub: sn }); else errors.push(`Linha ${i + 1}: use SUBAREA | Área > Nome.`); return; }
     if (kind === 'nota') { const [an, sn] = (f[1] || '').split('>').map((x) => x.trim()); if (an && sn && f[2]) items.push({ kind: 'note', area: an, sub: sn, t: f.slice(2).join(' | ') }); else errors.push(`Linha ${i + 1}: use NOTA | Área > Subárea | texto.`); return; }
     errors.push(`Linha ${i + 1}: não entendi "${line.slice(0, 40)}".`);
@@ -1024,14 +1026,25 @@ function findSub(a, name) {
   a.subs.push(name); return name;
 }
 function applyImport(items) {
-  const c = { task: 0, habit: 0, area: 0, sub: 0, note: 0, skip: 0 }, now = new Date().toISOString();
+  const c = { task: 0, habit: 0, area: 0, sub: 0, note: 0, skip: 0, upd: 0, del: 0 }, now = new Date().toISOString();
   items.forEach((it) => {
     if (it.kind === 'area') { if (!findArea(it.n)) { findArea(it.n, true); c.area++; } return; }
     if (it.kind === 'sub') { const a = findArea(it.area, true), had = a.subs.some((x) => norm(x) === norm(it.sub)); findSub(a, it.sub); if (!had) c.sub++; return; }
     if (it.kind === 'habit') { if (DB.habits.some((h) => norm(h.n) === norm(it.n))) { c.skip++; return; } DB.habits.push({ id: uid(), n: it.n, type: it.type, i: it.type === 'bad' ? 'block' : 'check_circle', goal: it.goal, created: now, days: {} }); c.habit++; return; }
     if (it.kind === 'note') { const a = findArea(it.area, true), sb = findSub(a, it.sub); DB.notes.push({ id: uid(), a: a.k, s: sb, t: it.t, at: now }); c.note++; return; }
+    if (it.kind === 'del') { const n0 = DB.tasks.length; DB.tasks = DB.tasks.filter((t) => t.done || norm(t.t) !== norm(it.t)); c.del += n0 - DB.tasks.length; return; }
     if (it.kind === 'task') {
-      if (DB.tasks.some((t) => norm(t.t) === norm(it.t) && (t.date || null) === it.date && !t.done)) { c.skip++; return; }
+      // tarefa aberta com o mesmo nome: atualiza o que veio no texto (correção, não conta como adiada)
+      const ex = DB.tasks.find((t) => !t.done && norm(t.t) === norm(it.t));
+      if (ex) {
+        const g = it.given || {};
+        if (g.area) { const a = findArea(it.area, true); if (a) { ex.a = a.k; ex.s = it.sub ? findSub(a, it.sub) : ''; } }
+        if (g.q) ex.q = it.q;
+        if (g.date) ex.date = it.date;
+        if (g.time) ex.time = it.time;
+        ex.st = ex.st || []; it.st.forEach((x) => { if (!ex.st.some((y) => norm(y.t) === norm(x))) ex.st.push({ id: uid(), t: x, done: false, doneAt: null }); });
+        c.upd++; return;
+      }
       const a = findArea(it.area, true) || DB.areas[0], sb = a && it.sub ? findSub(a, it.sub) : '';
       DB.tasks.push({ id: uid(), t: it.t, a: a ? a.k : '', s: sb, q: it.q, date: it.date, time: it.time, done: false, doneAt: null, created: now, hist: [], st: it.st.map((x) => ({ id: uid(), t: x, done: false, doneAt: null })) });
       c.task++;
@@ -1052,7 +1065,7 @@ function impSheet() {
   <p>Subtarefas: linhas começando com "-" logo abaixo da tarefa.</p>
   <p><b>HABITO</b> | nome | Construir ou Cortar | meta em dias</p>
   <p><b>AREA</b> | nome · <b>SUBAREA</b> | Área &gt; nome · <b>NOTA</b> | Área &gt; Subárea | texto</p>
-  <p>Áreas e subáreas que ainda não existem são criadas. Tarefa ou hábito com o mesmo nome que já existe não é repetido.</p></div></details></div>`;
+  <p>Áreas e subáreas que ainda não existem são criadas. Se já existir uma tarefa aberta com o mesmo nome, ela é <b>atualizada</b> (área, prioridade, data e hora que vierem no texto). Hábito com o mesmo nome não é repetido.</p><p><b>APAGAR</b> | título apaga a tarefa aberta com esse nome.</p></div></details></div>`;
 }
 let IMP = null, IMP_T = null;
 function impPreview() {
@@ -1062,7 +1075,7 @@ function impPreview() {
   let h = '';
   if (!r.items.length && !r.errors.length) h = '<p class="hint">Nada para adicionar ainda.</p>';
   if (r.items.length) h += `<div class="impsum"><b>${pl(n('task'), 'tarefa', 'tarefas')}</b>${sts ? ` com ${pl(sts, 'subtarefa', 'subtarefas')}` : ''} · <b>${pl(n('habit'), 'hábito', 'hábitos')}</b>${n('area') ? ` · ${pl(n('area'), 'área', 'áreas')}` : ''}${n('sub') ? ` · ${pl(n('sub'), 'subárea', 'subáreas')}` : ''}${n('note') ? ` · ${pl(n('note'), 'anotação', 'anotações')}` : ''}<small>${[1, 2, 3, 4].map((q) => `${Q[q].k}: ${qn(q)}`).join(' · ')}</small></div>
-    <div class="implist">${r.items.filter((x) => x.kind === 'task' || x.kind === 'habit').slice(0, 40).map((x) => x.kind === 'task' ? `<div>${mini(x.q)}<span>${esc(x.t)}<small>${esc(x.area || areaName(DB.areas[0] && DB.areas[0].k))}${x.sub ? ' · ' + esc(x.sub) : ''} · ${x.date ? fmtDate(x.date, true) : 'sem prazo'}${x.time ? ' · ' + x.time : ''}${x.st.length ? ` · ${x.st.length} subtarefas` : ''}</small></span></div>` : `<div>${ic(x.type === 'bad' ? 'block' : 'check_circle', 14)}<span>${esc(x.n)}<small>${x.type === 'bad' ? 'Cortar' : 'Construir'} · meta de ${x.goal} dias</small></span></div>`).join('')}</div>`;
+    <div class="implist">${r.items.filter((x) => x.kind === 'task' || x.kind === 'habit' || x.kind === 'del').slice(0, 40).map((x) => x.kind === 'del' ? `<div>${ic('delete', 14)}<span>${esc(x.t)} <em class="upd">apaga</em><small>${DB.tasks.some((t) => !t.done && norm(t.t) === norm(x.t)) ? 'tarefa encontrada' : 'não encontrei essa tarefa'}</small></span></div>` : x.kind === 'task' ? `<div>${mini(x.q)}<span>${esc(x.t)}${DB.tasks.some((t) => !t.done && norm(t.t) === norm(x.t)) ? ' <em class="upd">atualiza</em>' : ''}<small>${esc(x.area || areaName(DB.areas[0] && DB.areas[0].k))}${x.sub ? ' · ' + esc(x.sub) : ''} · ${x.date ? fmtDate(x.date, true) : 'sem prazo'}${x.time ? ' · ' + x.time : ''}${x.st.length ? ` · ${x.st.length} subtarefas` : ''}</small></span></div>` : `<div>${ic(x.type === 'bad' ? 'block' : 'check_circle', 14)}<span>${esc(x.n)}<small>${x.type === 'bad' ? 'Cortar' : 'Construir'} · meta de ${x.goal} dias</small></span></div>`).join('')}</div>`;
   if (r.errors.length) h += `<div class="imperr">${r.errors.slice(0, 8).map((e) => `<p>${esc(e)}</p>`).join('')}</div>`;
   $('#impprev').innerHTML = h;
   $('[data-impgo]').disabled = !r.items.length;

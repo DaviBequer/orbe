@@ -2,6 +2,11 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v17 — 2026-11-09
+- **Colar corrige:** se já existe uma tarefa aberta com o mesmo nome, colar de novo **atualiza** a área, a prioridade,
+  a data e a hora (e acrescenta subtarefas novas), sem duplicar e sem contar como adiada. A prévia mostra "atualiza".
+- Nova linha **APAGAR | título** para tirar uma tarefa aberta pelo nome.
+
 ## v16 — 2026-11-09
 - Matriz com nomes para quem organiza só a própria vida: **Faça** (urgente e importante), **Planeje** (importante,
   sem pressa), **Resolva rápido** (urgente, pouco importante: faça logo, sem gastar muito tempo) e **Quando der**
