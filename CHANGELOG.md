@@ -2,6 +2,10 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v19 — 2026-11-10
+- Colar aceita **LIMPAR | tudo** (ou tarefas, hábitos, anotações): apaga isso do app antes de colar o resto, com aviso
+  na prévia e confirmação. Áreas e subáreas ficam. A limpeza também vale nos outros aparelhos da conta.
+
 ## v18 — 2026-11-09
 - Colar não repete anotação que já existe com o mesmo texto na mesma área.
 

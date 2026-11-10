@@ -26,7 +26,7 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva
   `TAREFA | título | Área > Subárea | Faça/Planeje/Resolva rápido/Quando der | data (hoje, amanhã, sexta, 15/11, vazio) | hora`,
   linhas "- " abaixo = subtarefas; `HABITO | nome | Construir/Cortar | meta`; `AREA | nome`; `SUBAREA | Área > nome`;
   `NOTA | Área > Subárea | texto`; "#" = comentário. Cria áreas/subáreas que faltam. TAREFA com o nome de uma tarefa aberta ATUALIZA os campos que vierem (sem `hist`);
-  `APAGAR | título` remove; hábito com nome igual não repete.
+  `APAGAR | título` remove; `LIMPAR | tudo/tarefas/hábitos/anotações` apaga antes de colar (pede confirmação); hábito com nome igual não repete.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 
