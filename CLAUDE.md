@@ -19,7 +19,8 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva
   0–100 por critérios ponderados (força por suavização exponencial, 14 dias, pontualidade do registro, meta, recuperação,
   horário) e 10 níveis; "Hábitos de hoje" no Hoje.
 - **Números:** no dia certo, remarcadas, atrasadas, tempo até fazer, gráfico de linha, matriz, as que mais voltam, por área.
-- Mudar a data de uma tarefa conta como remarcada (`hist`).
+- Mudar a data de uma tarefa conta como remarcada (`hist`). `dueState()`: vencida (vermelho `--late`) ou perto, até 2 h (laranja `--soon`).
+- Resetar dados: ícone `data-resetall` ao lado da versão nas Configurações → `clearAccount()`.
 - Subtarefas em `t.st` = [{id, t, done, doneAt}]. `units()` transforma cada subtarefa numa tarefa com a mesma prioridade,
   data, área e histórico da principal; `measure()` (Pulso) e o progresso do dia contam por unidades.
 - Colar texto (☰ → Colar, `parseImport`/`applyImport`): uma linha por item, campos com "|":

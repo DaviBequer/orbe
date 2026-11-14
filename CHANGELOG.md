@@ -2,6 +2,12 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v20 — 2026-11-14
+- Tarefa **vencida** (dia que passou, ou hoje com a hora já passada) fica em **vermelho**, com "vencida" ou
+  "passou do horário". Tarefa **perto do horário** (hoje, até 2 horas antes) fica em **laranja**, com "em 1h".
+- Configurações: ícone pequeno ao lado da versão para **resetar os dados do app** (tarefas, hábitos, anotações e
+  áreas voltam ao começo; nome e conta continuam), com confirmação.
+
 ## v19 — 2026-11-10
 - Colar aceita **LIMPAR | tudo** (ou tarefas, hábitos, anotações): apaga isso do app antes de colar o resto, com aviso
   na prévia e confirmação. Áreas e subáreas ficam. A limpeza também vale nos outros aparelhos da conta.

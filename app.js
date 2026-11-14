@@ -122,20 +122,29 @@ const mini = (q, s = 12) => `<svg class="mini q${q}" width="${s}" height="${s}" 
 const byQ = (a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || a.q - b.q || ((a.time || '99') < (b.time || '99') ? -1 : 1);
 const sig = (t) => (t.done ? '×' : t.time ? '○' : '•');
 const isLate = (t) => !t.done && t.date && t.date < today();
+// vencida: dia já passou, ou é hoje e a hora já passou. Perto: hoje, faltando até 2 horas.
+function dueState(t) {
+  if (t.done || !t.date) return '';
+  const t0 = today(); if (t.date < t0) return 'late';
+  if (t.date !== t0 || !t.time) return '';
+  const [h, m] = t.time.split(':').map(Number), d = new Date(), mins = h * 60 + m - (d.getHours() * 60 + d.getMinutes());
+  return mins < 0 ? 'late-hour' : mins <= 120 ? 'soon' : '';
+}
 
 // Subtarefas ficam em t.st = [{id, t, done, doneAt}]. Nas contas, cada uma vale como uma tarefa com a
 // mesma prioridade, data, área e histórico da tarefa principal.
 const units = (list) => list.flatMap((t) => [t, ...(t.st || []).map((x) => ({ ...t, id: t.id + ':' + x.id, t: x.t, done: !!x.done, doneAt: x.doneAt || null, st: [] }))]);
 function row(t) {
+  const ds = dueState(t);
   const meta = [
-    isLate(t) ? `<span class="late">${ic('history', 13)}vencida · ${fmtDate(t.date)}</span>` : '',
+    ds === 'late' ? `<span class="late">${ic('history', 13)}vencida · ${fmtDate(t.date)}</span>` : ds === 'late-hour' ? `<span class="late">${ic('history', 13)}passou do horário</span>` : ds === 'soon' ? `<span class="soon">${ic('notifications', 13)}${inTxt(t.time)}</span>` : '',
     t.time ? `<span class="tm">${svgi('hora', 13)}${t.time}</span>` : '',
     `<span>${esc(areaName(t.a))}${t.s ? ' · ' + esc(t.s) : ''}</span>`,
     t.hist && t.hist.length ? `<span class="rm">${svgi('adiada', 13, UI.animRem === t.id)}adiada ${t.hist.length}×</span>` : '',
     t.st && t.st.length ? `<span class="stc">${ic('checklist', 13)}${t.st.filter((x) => x.done).length}/${t.st.length}</span>` : '',
   ].join('');
   const subl = t.st && t.st.length && !t.done ? `<div class="subl">${t.st.map((x) => `<button class="sub-it${x.done ? ' done' : ''}" data-stid="${x.id}" data-tid="${t.id}" aria-pressed="${!!x.done}"><span class="sck"></span><span class="stt">${esc(x.t)}</span></button>`).join('')}</div>` : '';
-  return `<div class="task q${t.q}${t.done ? ' done' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div>${subl}</div></div>`;
+  return `<div class="task q${t.q}${t.done ? ' done' : ''}${ds ? ' due-' + (ds === 'soon' ? 'soon' : 'late') : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div>${subl}</div></div>`;
 }
 
 /* ---------- HOJE ---------- */
@@ -649,7 +658,7 @@ function settingsSheet() {
   <div class="lbl">Teu nome na saudação${SYNC.user ? ' (desta conta)' : ''}</div><input class="ttl" id="uname" value="${esc(DB.name)}" placeholder="Teu nome" autocomplete="off">
   <div class="set-row"><span>Tarefas guardadas</span><small>${DB.tasks.length}</small></div>
   <div class="set-row"><span>${ic('content_paste', 20)}<span>Colar tarefas e hábitos<small style="display:block">texto pronto, montado com o Claude</small></span></span><button class="del" data-openimp>Colar</button></div>
-  <div class="set-row"><span>Versão</span><small>v${self.APP_VERSION}</small></div>
+  <div class="set-row"><span>Versão</span><span class="vrow"><small>v${self.APP_VERSION}</small><button class="mini-reset" data-resetall aria-label="Resetar os dados do app" title="Resetar os dados do app">${ic('restart_alt', 16)}</button></span></div>
   <div class="save-row"><button class="save" data-saveset>Pronto</button></div></div>`;
 }
 function accSheet() {
@@ -696,6 +705,11 @@ APP.addEventListener('click', (e) => {
   if ((x = c('[data-eye]'))) { const i = $('#spass'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; x.innerHTML = ic(show ? 'visibility_off' : 'visibility', 22); x.setAttribute('aria-pressed', show); x.setAttribute('aria-label', show ? 'Esconder senha' : 'Mostrar senha'); i.focus(); return; }
   if (c('[data-login]') || c('[data-signup]')) { auth(c('[data-signup]') ? 'signup' : 'login'); return; }
   if (c('[data-logout]')) { saveUI(); try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { /* ignora */ } SYNC.client.auth.signOut().then(() => { toast('Saiu da conta. As tarefas dela ficam guardadas na conta.'); refreshSet(); }); return; }
+  if (c('[data-resetall]')) {
+    askConfirm('Resetar os dados do app?', 'Resetar', async () => { await clearAccount(); try { localStorage.removeItem('orbe.ui'); } catch (e) { /* ignora */ } closeSheet('set'); go('home'); },
+      `Tarefas, hábitos, anotações e áreas voltam ao começo${SYNC.user ? ', aqui e nos outros aparelhos desta conta' : ''}. O teu nome e a conta continuam.`);
+    return;
+  }
   if (c('[data-clearacc]')) { askConfirm('Apagar todos os dados desta conta?', 'Apagar', clearAccount, 'Tarefas, anotações, áreas e hábitos desta conta somem aqui e nos outros aparelhos dela.'); return; }
   if (c('[data-syncnow]')) { sync(true); return; }
   if (c('[data-openacc]')) { openSheet('acc', accSheet()); return; }
