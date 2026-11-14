@@ -2,6 +2,10 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v22 — 2026-11-14
+- Escolher a hora com a rodinha do mouse: cada clique anda **1 hora** (ou 1 passo nos minutos), em vez de pular várias.
+  No touchpad, o movimento é juntado até completar um passo.
+
 ## v21 — 2026-11-14
 - No computador o conteúdo ocupa a tela toda (sem as faixas brancas dos lados). Em telas largas: semana da agenda
   em 4 colunas, Constância com 3 ou 4 hábitos por linha e Pulso em 3 colunas; o gráfico do Pulso tem tamanho limitado.

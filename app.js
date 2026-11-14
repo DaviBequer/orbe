@@ -632,6 +632,18 @@ function initWheels() {
     const mark = () => { const i = wIdx(w); $$('[data-wi]', w).forEach((e) => e.classList.toggle('on', +e.dataset.wi === i)); };
     w.scrollTop = (k === 0 ? h : MINS.indexOf(mi - (mi % 10))) * IH; mark();
     w.addEventListener('scroll', mark, { passive: true });
+    // rodinha do mouse: cada clique anda 1 item (no touchpad, junta o movimento até completar 1 item)
+    let tgt = null, acc = 0, wt = null;
+    w.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const n = $$('[data-wi]', w).length, big = e.deltaMode === 1 || Math.abs(e.deltaY) >= 50;
+      let step = 0;
+      if (big) step = Math.sign(e.deltaY); else { acc += e.deltaY; if (Math.abs(acc) >= 30) { step = Math.sign(acc); acc = 0; } }
+      if (!step) return;
+      tgt = Math.max(0, Math.min(n - 1, (tgt === null ? wIdx(w) : tgt) + step));
+      w.scrollTo({ top: tgt * IH, behavior: 'smooth' });
+      clearTimeout(wt); wt = setTimeout(() => { tgt = null; acc = 0; }, 250);
+    }, { passive: false });
     let sy = null, st = 0, moved = false;
     w.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') return; sy = e.clientY; st = w.scrollTop; moved = false; w.style.scrollSnapType = 'none'; w.classList.add('drag'); w.setPointerCapture(e.pointerId); });
     w.addEventListener('pointermove', (e) => { if (sy === null) return; const dy = e.clientY - sy; if (Math.abs(dy) > 3) moved = true; w.scrollTop = st - dy; });
