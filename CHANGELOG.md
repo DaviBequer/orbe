@@ -2,6 +2,10 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v21 — 2026-11-14
+- No computador o conteúdo ocupa a tela toda (sem as faixas brancas dos lados). Em telas largas: semana da agenda
+  em 4 colunas, Constância com 3 ou 4 hábitos por linha e Pulso em 3 colunas; o gráfico do Pulso tem tamanho limitado.
+
 ## v20 — 2026-11-14
 - Tarefa **vencida** (dia que passou, ou hoje com a hora já passada) fica em **vermelho**, com "vencida" ou
   "passou do horário". Tarefa **perto do horário** (hoje, até 2 horas antes) fica em **laranja**, com "em 1h".

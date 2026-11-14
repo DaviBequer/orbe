@@ -590,7 +590,7 @@ textarea.imp:focus{border-color:var(--ink)}
   .side-new kbd{margin-left:auto;font-family:var(--mono);font-size:11px;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:1px 6px;color:rgba(255,255,255,.7)}
   .fab{display:none}
   .screens{margin-left:236px}
-  .screen{padding:28px max(36px,calc((100% - 1120px)/2)) 56px}
+  .screen{padding:28px 40px 56px}
   .screen[data-s="home"]{padding-top:28px}
   .hero{margin:0;border-radius:24px;padding:18px 28px 24px}
   .hero h2{font-size:30px}
@@ -647,7 +647,7 @@ textarea.imp:focus{border-color:var(--ink)}
   .nav button .ms{--s:24px}
   .nav .side-logo{font-size:21px}
   .nav .side-new{font-size:15.5px;padding:14px 18px}
-  .screen{padding:34px max(44px,calc((100% - 1240px)/2)) 64px}
+  .screen{padding:34px 48px 64px}
   .screen[data-s="home"]{padding-top:34px}
   .ag-h b{font-size:34px}
   .sub-h,.sec-h small{font-size:13.5px}
@@ -697,5 +697,22 @@ textarea.imp:focus{border-color:var(--ink)}
   .qc small{font-size:12px}
 }
 
+
+/* telas bem largas: aproveita a largura toda */
+@media (min-width:1400px){
+  .cols{gap:40px}
+  .cols.vida{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}
+  .cols.ag{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)}
+  .cols.ag .spread{grid-template-columns:repeat(4,1fr)}
+  .cols.ag .sp.wide{grid-column:span 2}
+  .sgrid{grid-template-columns:repeat(3,1fr)}
+  .sgrid .card:first-child{grid-column:1/-1}
+  .hlist{grid-template-columns:repeat(3,1fr)}
+  .vis svg{max-width:520px}
+}
+@media (min-width:900px){.card .spark{max-width:720px;max-height:300px;margin-left:auto;margin-right:auto}}
+@media (min-width:1800px){
+  .hlist{grid-template-columns:repeat(4,1fr)}
+}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
