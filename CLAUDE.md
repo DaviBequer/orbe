@@ -32,6 +32,7 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva
   `FOCI` = [{id, start, end}] em `localStorage['orbe.focus']` (só no aparelho; várias ao mesmo tempo). `tickFocus()` desenha
   `.focus` (z-index 11; com mais de uma, cartão escuro `.fz-list.multi` com uma linha por tarefa, a que acaba antes em cima;
   pílulas no topo quando há janela aberta no celular; altura em `--fzh`); cores por `focusState()` (azul → amarelo ≤50% → vermelho ≤20%/5 min → passou).
+  Visual preto e branco: só o tempo, a bolinha e a linha de progresso usam a cor (`--fz`).
   Flutuar: `openPip()` usa Document Picture-in-Picture (Chrome do computador) ou vídeo PiP de um canvas (`drawPip`, celular).
   No computador (≥900px e mouse) `startFocus` já chama `openPip(true)`; se o Document PiP falhar, tenta o vídeo PiP.
   Concluir soma os minutos em `t.spent`.

@@ -730,16 +730,16 @@ function focusState(f) {
   const lab = { blue: 'tranquilo', yellow: 'atenção', red: 'finalizando', over: 'passou do horário' }[level];
   return { t, en, left, over, level, lab, pct: Math.max(0, Math.min(100, (1 - r) * 100)), time: over ? '+' + clock(-left) : clock(left), spent: durTxt((now - st) / 60000), end: hhmm(new Date(en)) };
 }
-const FCOL = { blue: '#1D5FD1', yellow: '#E0A100', red: '#D2291C', over: '#D2291C' };
+const FCOL = { blue: '#5B9BFF', yellow: '#F2B705', red: '#FF5545', over: '#FF5545' };
 function focusRow(S, pipBtn) {
   const id = S.t.id;
   return `<div class="fz-in lv-${S.level}"><div class="fz-txt" data-fedit="${id}"><small><i></i>${S.lab} · até ${S.end}</small><b>${esc(S.t.t)}</b></div>
   <div class="fz-time" data-fedit="${id}"><span>${S.time}</span><small>${S.spent} feitos</small></div>
-  <div class="fz-acts"><button data-fdone="${id}" aria-label="Concluir ${esc(S.t.t)}" title="Concluir">${ic('check', 20)}</button>${pipBtn ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 19)}</button>` : ''}<button data-fstop="${id}" aria-label="Parar ${esc(S.t.t)}" title="Parar">${ic('close', 19)}</button></div>
+  <div class="fz-acts"><button data-fdone="${id}" aria-label="Concluir ${esc(S.t.t)}" title="Concluir">${ic('check', 17)}</button>${pipBtn ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 16)}</button>` : ''}<button data-fstop="${id}" aria-label="Parar ${esc(S.t.t)}" title="Parar">${ic('close', 17)}</button></div>
   <div class="fz-bar"><i style="width:${S.pct}%"></i></div></div>`;
 }
 function focusHTML(L, pip) {
-  const head = L.length > 1 ? `<div class="fz-head"><span>${svgi('hora', 15)}Fazendo agora · ${L.length}</span>${!pip && canPip() ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 17)}Flutuar</button>` : ''}</div>` : '';
+  const head = L.length > 1 ? `<div class="fz-head"><span>${svgi('hora', 13)}Fazendo agora · ${L.length}</span>${!pip && canPip() ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 14)}Flutuar</button>` : ''}</div>` : '';
   return `<div class="fz-list${L.length > 1 ? ' multi' : ''}">${head}${L.map((S) => focusRow(S, !pip && L.length === 1 && canPip())).join('')}</div>`;
 }
 function focusList() { return FOCI.map(focusState).filter(Boolean).sort((a, b) => a.en - b.en); }
@@ -763,7 +763,7 @@ function runFocus() { clearInterval(focusT); if (!FOCI.length) return; tickFocus
 // flutuar: no computador (Chrome) abre uma janelinha que fica por cima de tudo; no celular usa o
 // modo de vídeo flutuante, desenhando os cronômetros num canvas.
 const canPip = () => 'documentPictureInPicture' in window || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype);
-const pipH = (n) => 104 + (n > 1 ? 34 + (n - 1) * 86 : 0);
+const pipH = (n) => 12 + n * 46;
 let pipN = 0;
 function fitPipWin(n) { if (n === pipN || !PIPW) return; pipN = n; try { PIPW.resizeTo(PIPW.outerWidth, pipH(n) + (PIPW.outerHeight - PIPW.innerHeight)); } catch (e) { /* ignora */ } }
 async function openPip(auto) {
@@ -772,7 +772,7 @@ async function openPip(auto) {
     if (PIPW) { if (!auto) PIPW.focus(); return; }
     try {
       pipN = FOCI.length;
-      PIPW = await documentPictureInPicture.requestWindow({ width: 400, height: pipH(pipN) });
+      PIPW = await documentPictureInPicture.requestWindow({ width: 290, height: pipH(pipN) });
       [...document.querySelectorAll('link[rel=stylesheet]')].forEach((l) => { const n = PIPW.document.createElement('link'); n.rel = 'stylesheet'; n.href = l.href; PIPW.document.head.appendChild(n); });
       PIPW.document.body.className = 'pipdoc';
       PIPW.document.body.addEventListener('click', (e) => { const c = (q) => e.target.closest(q); let x; if ((x = c('[data-fdone]'))) focusDone(x.dataset.fdone); else if ((x = c('[data-fstop]'))) stopFocus(x.dataset.fstop); else window.focus(); });
@@ -794,26 +794,18 @@ async function openPip(auto) {
 }
 function drawPip(L) {
   if (!L.length) return;
-  const cv = PIPV._cv, g = cv.getContext('2d'), W = cv.width, n = Math.min(L.length, 4), one = n === 1;
-  const H = one ? 300 : n * 150; if (cv.height !== H) cv.height = H;
-  const rh = H / n, fit = (txt, w) => { let s = txt; while (g.measureText(s).width > w && s.length > 3) s = s.slice(0, -2); return s === txt ? s : s.slice(0, -1) + '…'; };
+  const cv = PIPV._cv, g = cv.getContext('2d'), W = cv.width, n = Math.min(L.length, 4), rh = 110, H = Math.max(220, n * rh);
+  if (cv.height !== H) cv.height = H;
+  const fit = (txt, w) => { let s = txt; while (g.measureText(s).width > w && s.length > 3) s = s.slice(0, -2); return s === txt ? s : s.slice(0, -1) + '…'; };
+  g.fillStyle = '#111214'; g.fillRect(0, 0, W, H); g.textBaseline = 'middle';
+  const y0 = (H - n * rh) / 2;
   L.slice(0, n).forEach((S, i) => {
-    const y = i * rh;
-    g.fillStyle = FCOL[S.level]; g.fillRect(0, y, W, rh);
-    g.textBaseline = 'top';
-    if (one) {
-      g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '400 30px Outfit, sans-serif'; g.fillText(fit(S.t.t, W - 60), 30, 26);
-      g.fillStyle = '#fff'; g.font = '300 120px Outfit, sans-serif'; g.fillText(S.time, 26, 70);
-      g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '400 26px Outfit, sans-serif'; g.fillText(`${S.lab} · até ${S.end}`, 30, 212);
-    } else {
-      g.font = '300 76px Outfit, sans-serif'; const tw = g.measureText(S.time).width;
-      g.fillStyle = '#fff'; g.fillText(S.time, W - tw - 24, y + 34);
-      g.fillStyle = '#fff'; g.font = '400 32px Outfit, sans-serif'; g.fillText(fit(S.t.t, W - tw - 70), 26, y + 36);
-      g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '400 24px Outfit, sans-serif'; g.fillText(`${S.lab} · até ${S.end}`, 26, y + 82);
-    }
-    const bh = one ? 14 : 8;
-    g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, y + rh - bh, W, bh); g.fillStyle = '#fff'; g.fillRect(0, y + rh - bh, W * S.pct / 100, bh);
-    if (i) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, y, W, 2); }
+    const y = y0 + i * rh, c = FCOL[S.level];
+    if (i) { g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(28, y, W - 56, 2); }
+    g.font = '400 64px "Geist Mono", monospace'; const tw = g.measureText(S.time).width;
+    g.fillStyle = S.over && Date.now() % 1200 > 600 ? 'rgba(255,85,69,.4)' : c; g.fillText(S.time, W - tw - 28, y + rh / 2);
+    g.fillStyle = '#fff'; g.font = '300 34px Outfit, sans-serif'; g.fillText(fit(S.t.t, W - tw - 90), 28, y + rh / 2 - 4);
+    g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(28, y + rh - 14, W - 56, 4); g.fillStyle = c; g.fillRect(28, y + rh - 14, (W - 56) * S.pct / 100, 4);
   });
 }
 function focusDone(id) {

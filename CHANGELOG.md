@@ -2,6 +2,12 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v26 — 2026-11-20
+- Cronômetro mais minimalista: cartão preto, textos em branco e cinza, só o **tempo** (e a bolinha e a linha fina
+  de progresso) leva a cor azul, amarela ou vermelha. Quando passa da hora, o tempo pisca.
+- Janelinha flutuante menor (290 px de largura, uma linha por tarefa): nome, tempo e os botões ✓ e ✕.
+- Botões e ícones menores e discretos; o botão da tarefa que está rodando fica preto.
+
 ## v25 — 2026-11-20
 - No computador, ao iniciar uma tarefa a **janelinha flutuante já abre sozinha**: o cronômetro continua à vista
   por cima de tudo mesmo com o Orbe minimizado.
