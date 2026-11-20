@@ -28,6 +28,11 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva
   linhas "- " abaixo = subtarefas; `HABITO | nome | Construir/Cortar | meta`; `AREA | nome`; `SUBAREA | Área > nome`;
   `NOTA | Área > Subárea | texto`; "#" = comentário. Cria áreas/subáreas que faltam. TAREFA com o nome de uma tarefa aberta ATUALIZA os campos que vierem (sem `hist`);
   `APAGAR | título` remove; `LIMPAR | tudo/tarefas/hábitos/anotações` apaga antes de colar (pede confirmação); hábito com nome igual não repete.
+- Fazendo agora (cronômetro): botão `.go` (`data-start`) em cada tarefa aberta → `openFocusPop()` pergunta a hora de acabar;
+  `FOCUS` = {id, start, end} em `localStorage['orbe.focus']` (só no aparelho). `tickFocus()` desenha a barra `.focus` (z-index 11,
+  compacta no topo quando há janela aberta no celular); cores por `focusState()` (azul → amarelo ≤50% → vermelho ≤20%/5 min → passou).
+  Flutuar: `openPip()` usa Document Picture-in-Picture (Chrome do computador) ou vídeo PiP de um canvas (`drawPip`, celular).
+  Concluir soma os minutos em `t.spent`.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 

@@ -569,6 +569,47 @@ textarea.imp:focus{border-color:var(--ink)}
 .mini-reset{background:none;border:0;padding:4px;margin:-4px -4px -4px 0;color:var(--muted);opacity:.55;cursor:pointer;display:grid;border-radius:50%}
 .mini-reset:hover,.mini-reset:focus-visible{opacity:1}
 
+/* fazendo agora: botão iniciar na tarefa */
+.task .go{flex:none;align-self:center;width:32px;height:32px;margin:-4px -6px -4px 0;border:0;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;opacity:.7;transition:opacity .2s,background .2s}
+.task .go:hover,.task .go:focus-visible{opacity:1;background:var(--soft)}
+.task .go.on{opacity:1;color:#fff;background:var(--fz,#1D5FD1)}
+.task.doing .tt{font-weight:500}
+/* barra do cronômetro: sempre por cima de tudo no app */
+.focus{position:absolute;left:10px;right:10px;bottom:calc(74px + var(--sbt));z-index:11;transform:translateY(16px);opacity:0;pointer-events:none;transition:transform .3s cubic-bezier(.2,.9,.25,1),opacity .25s,top .3s}
+.focus.on{transform:none;opacity:1;pointer-events:auto}
+.fz-in{--fz:#1D5FD1;position:relative;display:flex;align-items:center;gap:12px;padding:10px 10px 13px 16px;border-radius:20px;background:var(--fz);color:#fff;overflow:hidden;box-shadow:0 14px 30px -14px rgba(0,0,0,.55);transition:background 1.2s ease}
+.fz-in.lv-yellow{--fz:#E0A100}
+.fz-in.lv-red,.fz-in.lv-over{--fz:#D2291C}
+.fz-in.lv-over{animation:fzpulse 1.4s ease-in-out infinite}
+@keyframes fzpulse{50%{filter:brightness(1.18)}}
+.fz-txt{flex:1;min-width:0;cursor:pointer}
+.fz-txt small{display:flex;align-items:center;gap:6px;font-size:11.5px;opacity:.9;text-transform:lowercase}
+.fz-txt small i{width:7px;height:7px;border-radius:50%;background:#fff;animation:fzdot 1.6s ease-in-out infinite}
+@keyframes fzdot{50%{opacity:.25}}
+.fz-txt b{display:block;font-weight:400;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.fz-time{text-align:right;cursor:pointer;flex:none}
+.fz-time span{display:block;font-family:'Geist Mono',monospace;font-size:24px;line-height:1.05;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.fz-time small{font-size:11px;opacity:.85}
+.fz-acts{display:flex;gap:2px;flex:none}
+.fz-acts button{width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center;cursor:pointer}
+.fz-acts button:hover{background:rgba(255,255,255,.28)}
+.fz-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.25)}
+.fz-bar i{display:block;height:100%;background:#fff;transition:width 1s linear}
+.app.focusing .fab{bottom:calc(152px + var(--sbt))}
+.app.focusing .screen,.app.focusing .detail{padding-bottom:calc(180px + var(--sbt))}
+/* com uma janela aberta no celular, a barra sobe e fica compacta */
+.app:has(.sheet.open,.pop.open) .focus{bottom:auto;top:calc(var(--st) + 6px);left:50%;right:auto;transform:translateX(-50%)}
+.app:has(.sheet.open,.pop.open) .fz-txt,.app:has(.sheet.open,.pop.open) .fz-acts,.app:has(.sheet.open,.pop.open) .fz-time small{display:none}
+.app:has(.sheet.open,.pop.open) .fz-in{padding:6px 14px 8px;border-radius:99px}
+.app:has(.sheet.open,.pop.open) .fz-time span{font-size:16px}
+.fz{font-size:12px;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fq{margin:0 0 10px}
+.pipv{position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0;pointer-events:none}
+/* janelinha flutuante do computador */
+body.pipdoc{margin:0;background:#111;font-family:Outfit,sans-serif;overflow:hidden}
+body.pipdoc .fz-in{height:100vh;box-sizing:border-box;border-radius:0;box-shadow:none}
+body.pipdoc .fz-time span{font-size:30px}
+
 /* ---------- base das colunas (celular: tudo empilhado) ---------- */
 .nav .side-logo,.nav .side-new{display:none}
 .d-only{display:none!important}
@@ -699,6 +740,16 @@ textarea.imp:focus{border-color:var(--ink)}
 
 
 /* telas bem largas: aproveita a largura toda */
+@media (min-width:900px){
+  .focus{left:auto;right:28px;bottom:24px;width:400px}
+  .app.focusing .screen,.app.focusing .detail{padding-bottom:130px}
+  .app:has(.sheet.open,.pop.open) .focus{top:auto;bottom:24px;left:auto;right:28px;transform:none}
+  .app:has(.sheet.open,.pop.open) .fz-txt,.app:has(.sheet.open,.pop.open) .fz-acts{display:block}
+  .app:has(.sheet.open,.pop.open) .fz-acts{display:flex}
+  .app:has(.sheet.open,.pop.open) .fz-time small{display:block}
+  .app:has(.sheet.open,.pop.open) .fz-in{padding:10px 10px 13px 16px;border-radius:20px}
+  .app:has(.sheet.open,.pop.open) .fz-time span{font-size:24px}
+}
 @media (min-width:1400px){
   .cols{gap:40px}
   .cols.vida{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}

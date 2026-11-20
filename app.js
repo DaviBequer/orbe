@@ -144,7 +144,9 @@ function row(t) {
     t.st && t.st.length ? `<span class="stc">${ic('checklist', 13)}${t.st.filter((x) => x.done).length}/${t.st.length}</span>` : '',
   ].join('');
   const subl = t.st && t.st.length && !t.done ? `<div class="subl">${t.st.map((x) => `<button class="sub-it${x.done ? ' done' : ''}" data-stid="${x.id}" data-tid="${t.id}" aria-pressed="${!!x.done}"><span class="sck"></span><span class="stt">${esc(x.t)}</span></button>`).join('')}</div>` : '';
-  return `<div class="task q${t.q}${t.done ? ' done' : ''}${ds ? ' due-' + (ds === 'soon' ? 'soon' : 'late') : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div>${subl}</div></div>`;
+  const on = FOCUS && FOCUS.id === t.id;
+  const go = t.done ? '' : `<button class="go${on ? ' on' : ''}" data-start="${t.id}" aria-label="${on ? 'Mudar a hora de acabar' : 'Iniciar esta tarefa'}" title="${on ? 'Fazendo agora' : 'Iniciar'}">${ic(on ? 'timer' : 'play_arrow', 18)}</button>`;
+  return `<div class="task q${t.q}${t.done ? ' done' : ''}${ds ? ' due-' + (ds === 'soon' ? 'soon' : 'late') : ''}${on ? ' doing' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div>${subl}</div>${go}</div>`;
 }
 
 /* ---------- HOJE ---------- */
@@ -618,19 +620,18 @@ function calPop() {
 }
 /* hora em colunas que rolam */
 const HRS = [...Array(24).keys()], MINS = [0, 10, 20, 30, 40, 50], IH = 40;
+const wcols = (mins) => { const col = (arr) => `<div class="wheel"><span class="pad"></span>${arr.map((v, i) => `<div data-wi="${i}">${pad(v)}</div>`).join('')}<span class="pad"></span></div>`; return `<div class="wlab"><span>Hora</span><span></span><span>Minutos</span></div><div class="wheels">${col(HRS)}<span class="wsep">:</span>${col(mins)}</div>`; };
 function timePop() {
-  const col = (arr) => `<div class="wheel"><span class="pad"></span>${arr.map((v, i) => `<div data-wi="${i}">${pad(v)}</div>`).join('')}<span class="pad"></span></div>`;
   return `<div class="calh"><b>Hora</b><span class="muted" style="font-size:12px">arraste para escolher</span></div>
-  <div class="wlab"><span>Hora</span><span></span><span>Minutos</span></div>
-  <div class="wheels">${col(HRS)}<span class="wsep">:</span>${col(MINS)}</div>
+  ${wcols(MINS)}
   <div class="pact"><button data-notime>Sem hora</button><button class="pri" data-tset>Definir</button></div>`;
 }
 const wIdx = (w) => Math.max(0, Math.min($$('[data-wi]', w).length - 1, Math.round(w.scrollTop / IH)));
-function initWheels() {
-  let [h, mi] = (UI.form.time || '09:00').split(':').map(Number);
+function initWheels(time = UI.form.time || '09:00', mins = MINS) {
+  const [h, mi] = time.split(':').map(Number), stp = mins[1] - mins[0];
   $$('.pop .wheel').forEach((w, k) => {
     const mark = () => { const i = wIdx(w); $$('[data-wi]', w).forEach((e) => e.classList.toggle('on', +e.dataset.wi === i)); };
-    w.scrollTop = (k === 0 ? h : MINS.indexOf(mi - (mi % 10))) * IH; mark();
+    w.scrollTop = (k === 0 ? h : mins.indexOf(mi - (mi % stp))) * IH; mark();
     w.addEventListener('scroll', mark, { passive: true });
     // rodinha do mouse: cada clique anda 1 item (no touchpad, junta o movimento até completar 1 item)
     let tgt = null, acc = 0, wt = null;
@@ -677,6 +678,119 @@ function accSheet() {
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${SYNC.user ? 'Tua conta' : 'Entrar'}<button class="rbtn" data-closeacc aria-label="Fechar">${ic('close', 18)}</button></h4>${syncSection()}</div>`;
 }
 
+/* ---------- fazendo agora: cronômetro até a hora de acabar ---------- */
+// FOCUS = {id, start, end} (ISO), guardado só neste aparelho. A barra fica por cima de tudo no app e
+// pode flutuar sobre outras janelas (Picture-in-Picture). Cor: azul tranquilo → amarelo atenção → vermelho finalizando.
+const FOCUS_KEY = 'orbe.focus', FMINS = [...Array(12).keys()].map((i) => i * 5);
+let FOCUS = null, focusT = null, PIPW = null, PIPV = null, lastLevel = '';
+try { FOCUS = JSON.parse(localStorage.getItem(FOCUS_KEY) || 'null'); } catch (e) { FOCUS = null; }
+const hhmm = (d) => pad(d.getHours()) + ':' + pad(d.getMinutes());
+function clock(ms) { const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${pad(m)}:${pad(x)}`; }
+function durTxt(min) { min = Math.max(0, Math.round(min)); return min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${min % 60 ? pad(min % 60) : ''}`; }
+function openFocusPop(id) {
+  const t = DB.tasks.find((y) => y.id === id); if (!t) return;
+  UI.fstart = id;
+  const on = FOCUS && FOCUS.id === id, base = on ? new Date(FOCUS.end) : new Date(Date.now() + 30 * 60000);
+  if (!on) base.setMinutes(Math.ceil(base.getMinutes() / 5) * 5, 0, 0);
+  openPop(`<div class="calh"><b>${on ? 'Mudar a hora de acabar' : 'Até que horas?'}</b><span class="muted fz">${esc(t.t)}</span></div>
+  <div class="quick fq">${[[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 h'], [90, '1h30'], [120, '2 h']].map(([m, l]) => `<button data-fdur="${m}">${l}</button>`).join('')}</div>
+  ${wcols(FMINS)}
+  <div class="pact"><button data-pclose>Cancelar</button><button class="pri" data-fset>${on ? 'Mudar' : 'Iniciar'}</button></div>`);
+  initWheels(hhmm(base), FMINS);
+}
+function startFocus(id, end) {
+  const same = FOCUS && FOCUS.id === id;
+  if (FOCUS && !same) { const old = DB.tasks.find((y) => y.id === FOCUS.id); if (old) { addSpent(old); save(); } }
+  FOCUS = { id, start: same ? FOCUS.start : new Date().toISOString(), end: end.toISOString() };
+  lastLevel = ''; storeFocus(); closePop(); renderAll(); runFocus();
+  toast(same ? `Agora até ${hhmm(end)}.` : `Valendo! Até ${hhmm(end)}.`);
+}
+function addSpent(t) { if (!FOCUS) return; t.spent = (t.spent || 0) + Math.max(0, Math.round((Date.now() - new Date(FOCUS.start)) / 60000)); }
+function storeFocus() { try { FOCUS ? localStorage.setItem(FOCUS_KEY, JSON.stringify(FOCUS)) : localStorage.removeItem(FOCUS_KEY); } catch (e) { /* ignora */ } }
+function stopFocus() {
+  FOCUS = null; storeFocus(); clearInterval(focusT); focusT = null;
+  const b = $('.focus'); if (b) b.classList.remove('on');
+  APP.classList.remove('focusing'); document.title = 'Orbe';
+  if (PIPW) { try { PIPW.close(); } catch (e) { /* ignora */ } PIPW = null; }
+  if (PIPV && document.pictureInPictureElement === PIPV) document.exitPictureInPicture().catch(() => {});
+  renderAll();
+}
+function focusState() {
+  const t = FOCUS && DB.tasks.find((y) => y.id === FOCUS.id); if (!t || t.done) return null;
+  const now = Date.now(), st = new Date(FOCUS.start).getTime(), en = new Date(FOCUS.end).getTime(), left = en - now, tot = Math.max(60000, en - st);
+  const f = left / tot, over = left <= 0;
+  const level = over ? 'over' : f <= 0.2 || left <= 5 * 60000 ? 'red' : f <= 0.5 ? 'yellow' : 'blue';
+  const lab = { blue: 'tranquilo', yellow: 'atenção', red: 'finalizando', over: 'passou do horário' }[level];
+  return { t, left, over, level, lab, pct: Math.max(0, Math.min(100, (1 - f) * 100)), time: over ? '+' + clock(-left) : clock(left), spent: durTxt((now - st) / 60000), end: hhmm(new Date(en)) };
+}
+const FCOL = { blue: '#1D5FD1', yellow: '#E0A100', red: '#D2291C', over: '#D2291C' };
+function focusHTML(S, pip) {
+  return `<div class="fz-in lv-${S.level}"><div class="fz-txt" data-fedit><small><i></i>${S.lab} · até ${S.end}</small><b>${esc(S.t.t)}</b></div>
+  <div class="fz-time" data-fedit><span>${S.time}</span><small>${S.spent} feitos</small></div>
+  <div class="fz-acts"><button data-fdone aria-label="Concluir tarefa" title="Concluir">${ic('check', 20)}</button>${pip ? '' : canPip() ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 19)}</button>` : ''}<button data-fstop aria-label="Parar" title="Parar">${ic('close', 19)}</button></div>
+  <div class="fz-bar"><i style="width:${S.pct}%"></i></div></div>`;
+}
+function tickFocus() {
+  const S = focusState();
+  if (!S) { if (FOCUS) stopFocus(); return; }
+  let b = $('.focus'); if (!b) { b = document.createElement('div'); b.className = 'focus'; b.setAttribute('role', 'timer'); APP.appendChild(b); }
+  b.innerHTML = focusHTML(S); b.classList.add('on'); APP.classList.add('focusing');
+  document.title = `${S.time} · ${S.t.t}`;
+  if (lastLevel && S.level !== lastLevel && (S.level === 'red' || S.level === 'over') && navigator.vibrate) navigator.vibrate(S.level === 'over' ? [200, 120, 200] : 60);
+  lastLevel = S.level;
+  if (PIPW) PIPW.document.body.innerHTML = focusHTML(S, true);
+  if (PIPV) drawPip(S);
+}
+function runFocus() { clearInterval(focusT); if (!FOCUS) return; tickFocus(); focusT = setInterval(tickFocus, 1000); }
+// flutuar: no computador (Chrome) abre uma janelinha que fica por cima de tudo; no celular usa o
+// modo de vídeo flutuante, desenhando o cronômetro num canvas.
+const canPip = () => 'documentPictureInPicture' in window || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype);
+async function openPip() {
+  try {
+    if ('documentPictureInPicture' in window) {
+      if (PIPW) { PIPW.focus(); return; }
+      PIPW = await documentPictureInPicture.requestWindow({ width: 380, height: 116 });
+      [...document.querySelectorAll('link[rel=stylesheet]')].forEach((l) => { const n = PIPW.document.createElement('link'); n.rel = 'stylesheet'; n.href = l.href; PIPW.document.head.appendChild(n); });
+      PIPW.document.body.className = 'pipdoc';
+      PIPW.document.body.addEventListener('click', (e) => { const c = (q) => e.target.closest(q); if (c('[data-fdone]')) focusDone(); else if (c('[data-fstop]')) stopFocus(); else window.focus(); });
+      PIPW.addEventListener('pagehide', () => { PIPW = null; });
+      tickFocus(); return;
+    }
+    if (!PIPV) {
+      const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300;
+      PIPV = document.createElement('video'); PIPV.muted = true; PIPV.playsInline = true; PIPV.className = 'pipv';
+      PIPV._cv = cv; PIPV.srcObject = cv.captureStream(); document.body.appendChild(PIPV);
+      PIPV.addEventListener('leavepictureinpicture', () => { PIPV.pause(); });
+    }
+    const S = focusState(); if (S) drawPip(S);
+    await PIPV.play(); await PIPV.requestPictureInPicture();
+  } catch (e) { toast('Este navegador não deixou flutuar.'); }
+}
+function drawPip(S) {
+  const cv = PIPV._cv, g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.fillStyle = FCOL[S.level]; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '400 30px Outfit, sans-serif'; g.textBaseline = 'top';
+  let tt = S.t.t; while (g.measureText(tt).width > W - 60 && tt.length > 3) tt = tt.slice(0, -2); if (tt !== S.t.t) tt = tt.slice(0, -1) + '…';
+  g.fillText(tt, 30, 26);
+  g.fillStyle = '#fff'; g.font = '300 120px Outfit, sans-serif'; g.fillText(S.time, 26, 70);
+  g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '400 26px Outfit, sans-serif'; g.fillText(`${S.lab} · até ${S.end}`, 30, 212);
+  g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, H - 14, W, 14); g.fillStyle = '#fff'; g.fillRect(0, H - 14, W * S.pct / 100, 14);
+}
+function focusDone() {
+  const t = FOCUS && DB.tasks.find((y) => y.id === FOCUS.id); if (!t) { stopFocus(); return; }
+  addSpent(t); const mins = Math.round((Date.now() - new Date(FOCUS.start)) / 60000);
+  t.done = true; t.doneAt = new Date().toISOString(); if (t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
+  save(); if (navigator.vibrate) navigator.vibrate(12); stopFocus(); toast(`Feita em ${durTxt(mins)}.`);
+}
+document.addEventListener('click', (e) => {
+  const c = (q) => e.target.closest(q); if (!c('.focus')) return;
+  if (c('[data-fdone]')) focusDone();
+  else if (c('[data-fstop]')) askConfirm('Parar o cronômetro?', 'Parar', stopFocus, 'A tarefa continua aberta.');
+  else if (c('[data-fpip]')) openPip();
+  else if (c('[data-fedit]') && FOCUS) openFocusPop(FOCUS.id);
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden && FOCUS) tickFocus(); });
+
 /* ---------- cliques ---------- */
 APP.addEventListener('click', (e) => {
   const c = (s) => e.target.closest(s); let x;
@@ -688,6 +802,13 @@ APP.addEventListener('click', (e) => {
   if (c('[data-notime]')) { UI.form.time = null; closePop(); rerenderTask(); return; }
   if (c('[data-tset]')) { const w = $$('.pop .wheel'); UI.form.time = pad(HRS[wIdx(w[0])]) + ':' + pad(MINS[wIdx(w[1])]); closePop(); rerenderTask('time'); return; }
   if ((x = c('.wheel [data-wi]'))) { x.parentNode.scrollTo({ top: +x.dataset.wi * IH, behavior: 'smooth' }); return; }
+  if ((x = c('[data-fdur]'))) { const d = new Date(Date.now() + +x.dataset.fdur * 60000); startFocus(UI.fstart, d); return; }
+  if (c('[data-fset]')) {
+    const w = $$('.pop .wheel'), h = HRS[wIdx(w[0])], m = FMINS[wIdx(w[1])], d = new Date(); d.setHours(h, m, 0, 0);
+    if (d <= new Date()) { if (h * 60 + m < 4 * 60) d.setDate(d.getDate() + 1); else { toast('Escolha uma hora depois de agora.'); return; } }
+    startFocus(UI.fstart, d); return;
+  }
+  if ((x = c('[data-start]'))) { e.stopPropagation(); openFocusPop(x.dataset.start); return; }
   if (c('[data-confirm]')) { const cb = confirmCb; confirmCb = null; closePop(); if (cb) setTimeout(cb, 50); return; }
   if (c('.pbd') || c('[data-pclose]')) { closePop(); return; }
   // formulário de tarefa
@@ -750,6 +871,7 @@ APP.addEventListener('click', (e) => {
   if ((x = c('.ck'))) {
     const r = x.closest('[data-id]'), t = DB.tasks.find((y) => y.id === r.dataset.id); if (!t) return;
     t.done = !t.done; t.doneAt = t.done ? new Date().toISOString() : null;
+    if (t.done && FOCUS && FOCUS.id === t.id) { addSpent(t); stopFocus(); }
     if (t.done && t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
     save();
     $$(`.task[data-id="${t.id}"]`).forEach((y) => y.classList.toggle('done', t.done));
@@ -866,6 +988,7 @@ APP.addEventListener('drop', (e) => {
 /* atualiza ao voltar para o app (virada do dia, contagem "em 1h20") */
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 setInterval(() => { if (!document.hidden && UI.tab === 'home') render('home'); }, 60000);
+runFocus();
 
 /* ---------- sincronização (Supabase) ---------- */
 // Projeto Supabase do Orbe. A chave publishable pode ficar no app:

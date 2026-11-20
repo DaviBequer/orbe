@@ -2,6 +2,15 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v23 — 2026-11-20
+- **Fazendo agora:** botão ▷ em cada tarefa aberta. Ao iniciar, o app pergunta até que horas
+  (atalhos de 15 min a 2 h ou a hora exata) e mostra uma barra por cima de tudo com a contagem regressiva,
+  o tempo já feito e a barra de progresso.
+- Cores pela hora que falta: azul (tranquilo), amarelo (atenção, metade do tempo), vermelho (finalizando,
+  últimos 20% ou 5 min) e vermelho pulsando quando passa da hora. O celular vibra ao ficar vermelho e ao acabar.
+- Botão de flutuar: a barra vira uma janelinha por cima das outras janelas (no computador e no celular).
+- Concluir pela barra marca a tarefa como feita e guarda o tempo gasto. Tocar no tempo muda a hora de acabar.
+
 ## v22 — 2026-11-14
 - Escolher a hora com a rodinha do mouse: cada clique anda **1 hora** (ou 1 passo nos minutos), em vez de pular várias.
   No touchpad, o movimento é juntado até completar um passo.
