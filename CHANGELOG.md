@@ -2,6 +2,14 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v27 — 2026-11-20
+- **Apps nativos** (pasta `native/`): APK do Android (Capacitor) e instalador do Windows (Tauri), montados pelo
+  GitHub Actions (`native.yml`). A casca abre o site publicado, então as atualizações do site chegam sozinhas.
+- Windows: a janelinha do cronômetro é uma janela própria sem bordas, sempre por cima (`timer.html`), que conta
+  sozinha mesmo com o app minimizado; concluir/parar nela vale no app.
+- No app, aviso "Versão nova do app" quando sai uma casca nova (versão `app-v<n>` no GitHub), com Atualizar/Depois.
+- Configurações: "Baixar o app" (Android/Windows) no navegador; no app, mostra a versão e confere se tem nova.
+
 ## v26 — 2026-11-20
 - Cronômetro mais minimalista: cartão preto, textos em branco e cinza, só o **tempo** (e a bolinha e a linha fina
   de progresso) leva a cor azul, amarela ou vermelha. Quando passa da hora, o tempo pisca.

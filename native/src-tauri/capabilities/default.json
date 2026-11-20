@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "orbe-site",
+  "description": "O site do Orbe pode chamar os comandos do app (janelinha do cronômetro, atualização).",
+  "windows": ["main", "timer"],
+  "remote": { "urls": ["https://davibequer.github.io/*"] },
+  "permissions": ["core:default", "core:window:allow-start-dragging"]
+}

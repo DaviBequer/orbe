@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Orbe · fazendo agora</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=Geist+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+<link rel="stylesheet" href="styles.css">
+<style>body.pipdoc{user-select:none;cursor:default}</style>
+</head>
+<body class="pipdoc">
+<script>
+// Janelinha do cronômetro do app do Windows (sem bordas, sempre por cima).
+// Lê as tarefas que o app grava em localStorage['orbe.fzdata'] e conta sozinha, mesmo com o app minimizado.
+// Concluir/parar: tira daqui na hora e deixa o pedido em localStorage['orbe.fzcmd'] para o app aplicar.
+'use strict';
+const pad = (n) => String(n).padStart(2, '0');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ic = (n, s) => `<span class="ms" style="--s:${s}px" aria-hidden="true">${n}</span>`;
+const clock = (ms) => { const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${pad(m)}:${pad(x)}`; };
+const gone = new Set();
+let lastN = -1, lastHTML = '';
+const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || 'null') || d; } catch (e) { return d; } };
+const tauri = () => window.__TAURI__ && window.__TAURI__.core;
+function list() {
+  const L = read('orbe.fzdata', []).filter((f) => !gone.has(f.id));
+  const live = new Set(read('orbe.fzdata', []).map((f) => f.id)); gone.forEach((id) => { if (!live.has(id)) gone.delete(id); });
+  const now = Date.now();
+  return L.map((f) => {
+    const st = new Date(f.start).getTime(), en = new Date(f.end).getTime(), left = en - now, r = left / Math.max(60000, en - st), over = left <= 0;
+    const level = over ? 'over' : r <= 0.2 || left <= 5 * 60000 ? 'red' : r <= 0.5 ? 'yellow' : 'blue';
+    return { ...f, en, level, pct: Math.max(0, Math.min(100, (1 - r) * 100)), time: over ? '+' + clock(-left) : clock(left) };
+  }).sort((a, b) => a.en - b.en);
+}
+function draw() {
+  const L = list();
+  if (!L.length) { if (lastN !== 0 && tauri()) tauri().invoke('close_timer'); lastN = 0; document.body.innerHTML = ''; return; }
+  if (L.length !== lastN && tauri()) tauri().invoke('open_timer', { height: 12 + L.length * 46 });
+  lastN = L.length;
+  const h = `<div class="fz-list" data-tauri-drag-region>${L.map((S) => `<div class="fz-in lv-${S.level}" data-tauri-drag-region>
+    <div class="fz-txt" data-tauri-drag-region><b data-tauri-drag-region>${esc(S.t)}</b></div>
+    <div class="fz-time" data-tauri-drag-region><span data-tauri-drag-region>${S.time}</span></div>
+    <div class="fz-acts"><button data-done="${S.id}" title="Concluir">${ic('check', 17)}</button><button data-stop="${S.id}" title="Parar">${ic('close', 17)}</button></div>
+    <div class="fz-bar"><i style="width:${S.pct}%"></i></div></div>`).join('')}</div>`;
+  if (h !== lastHTML) { document.body.innerHTML = h; lastHTML = h; }
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-done],[data-stop]'); if (!b) return;
+  const id = b.dataset.done || b.dataset.stop;
+  const cmds = read('orbe.fzcmd', []); cmds.push({ do: b.dataset.done ? 'done' : 'stop', id, at: new Date().toISOString() });
+  localStorage.setItem('orbe.fzcmd', JSON.stringify(cmds));
+  gone.add(id); draw();
+});
+draw(); setInterval(draw, 500);
+</script>
+</body>
+</html>

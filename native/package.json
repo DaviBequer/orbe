@@ -1,0 +1,14 @@
+{
+  "name": "orbe-native",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cascas nativas do Orbe (Android com Capacitor, Windows com Tauri) que abrem o site publicado.",
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "@tauri-apps/cli": "^2.12.6"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2"
+  }
+}

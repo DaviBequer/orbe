@@ -1,0 +1,20 @@
+{
+  "appId": "io.github.davibequer.orbe",
+  "appName": "Orbe",
+  "webDir": "www",
+  "server": {
+    "url": "https://davibequer.github.io/orbe/",
+    "androidScheme": "https",
+    "errorPath": "index.html"
+  },
+  "android": {
+    "appendUserAgent": "OrbeApp/android/0",
+    "backgroundColor": "#FFFFFF"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

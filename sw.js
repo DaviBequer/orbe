@@ -6,6 +6,7 @@ const FONTS = 'orbe-fonts';
 const ASSETS = [
   './',
   'index.html',
+  'timer.html',
   'styles.css',
   'app.js',
   'version.js',

@@ -37,7 +37,7 @@ jobs:
         env:
           V: ${{ steps.versao.outputs.versao }}
         run: |
-          APP="index.html styles.css app.js sw.js version.js manifest.webmanifest icons"
+          APP="index.html timer.html styles.css app.js sw.js version.js manifest.webmanifest icons"
           if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
             if git diff --quiet "v$V" HEAD -- $APP; then
               echo "nova=false" >> "$GITHUB_OUTPUT"
@@ -52,7 +52,7 @@ jobs:
       - name: Montar o site
         run: |
           mkdir _site
-          cp -r index.html styles.css app.js sw.js version.js manifest.webmanifest icons _site/
+          cp -r index.html timer.html styles.css app.js sw.js version.js manifest.webmanifest icons _site/
           touch _site/.nojekyll
 
       - uses: actions/configure-pages@v5

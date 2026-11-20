@@ -1,0 +1,124 @@
+name: Montar os apps (Android e Windows)
+
+# Monta o APK do Android e o instalador do Windows a partir de native/.
+# A casca só abre o site publicado, então as mudanças do site chegam sozinhas no app.
+# Quando native/shell-version.txt muda para um número novo, publica uma versão "app-v<número>"
+# na página de versões do GitHub; o app avisa e baixa de .../releases/latest/download/.
+on:
+  push:
+    branches: [main]
+    paths: ['native/**', '.github/workflows/native.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native
+  cancel-in-progress: false
+
+jobs:
+  versao:
+    runs-on: ubuntu-latest
+    outputs:
+      v: ${{ steps.v.outputs.v }}
+      nova: ${{ steps.v.outputs.nova }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          V=$(tr -dc '0-9' < native/shell-version.txt)
+          test -n "$V" || { echo "::error::native/shell-version.txt sem número"; exit 1; }
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/app-v$V" >/dev/null; then echo "nova=false" >> "$GITHUB_OUTPUT"; else echo "nova=true" >> "$GITHUB_OUTPUT"; fi
+
+  android:
+    needs: versao
+    runs-on: ubuntu-latest
+    env:
+      ORBE_SHELL_V: ${{ needs.versao.outputs.v }}
+      ORBE_KEY_PASS: ${{ secrets.ORBE_KEY_PASS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: native/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Preparar
+        working-directory: native
+        run: |
+          npm ci
+          node -e "const f='capacitor.config.json',c=require('./'+f);c.android.appendUserAgent='OrbeApp/android/'+process.env.ORBE_SHELL_V;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+          npx cap sync android
+      - name: Montar o APK
+        working-directory: native/android
+        run: |
+          chmod +x gradlew
+          if [ -z "$ORBE_KEY_PASS" ]; then
+            ./gradlew --no-daemon assembleDebug   # só para conferir que monta
+            echo "::error::Falta o segredo ORBE_KEY_PASS (Settings → Secrets and variables → Actions). Sem ele o APK não sai assinado."
+            exit 1
+          fi
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Orbe.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: Orbe.apk
+
+  windows:
+    needs: versao
+    runs-on: windows-latest
+    env:
+      ORBE_SHELL_V: ${{ needs.versao.outputs.v }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: native/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native/src-tauri -> target
+      - name: Montar o instalador
+        working-directory: native
+        shell: bash
+        run: |
+          npm ci
+          npx tauri build --config "{\"version\":\"1.$ORBE_SHELL_V.0\"}"
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe "$GITHUB_WORKSPACE/Orbe-instalador.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: Orbe-instalador.exe
+
+  publicar:
+    needs: [versao, android, windows]
+    if: needs.versao.outputs.nova == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v${{ needs.versao.outputs.v }}
+          name: Orbe app ${{ needs.versao.outputs.v }}
+          make_latest: true
+          body: |
+            Instaladores do Orbe (a parte do aparelho). As mudanças do dia a dia chegam sozinhas pelo site.
+            - Android: Orbe.apk
+            - Windows: Orbe-instalador.exe
+          files: |
+            Orbe.apk
+            Orbe-instalador.exe

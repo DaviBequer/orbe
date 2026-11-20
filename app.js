@@ -670,6 +670,8 @@ function settingsSheet() {
   ${acc}
   <div class="lbl">Teu nome na saudação${SYNC.user ? ' (desta conta)' : ''}</div><input class="ttl" id="uname" value="${esc(DB.name)}" placeholder="Teu nome" autocomplete="off">
   <div class="set-row"><span>Tarefas guardadas</span><small>${DB.tasks.length}</small></div>
+  ${SHELL ? `<div class="set-row"><span>${ic(SHELL.plat === 'windows' ? 'desktop_windows' : 'android', 20)}<span>App ${SHELL.plat === 'windows' ? 'do Windows' : 'do Android'}<small style="display:block">atualiza sozinho; a parte do aparelho avisa quando tiver nova</small></span></span><button class="del" data-updchk>app ${SHELL.v}</button></div>`
+    : `<div class="set-row"><span>${ic('install_mobile', 20)}<span>Baixar o app<small style="display:block">Android (APK) ou Windows (instalador)</small></span></span><span class="vrow"><a class="del dl" href="${REL}Orbe.apk">Android</a><a class="del dl" href="${REL}Orbe-instalador.exe">Windows</a></span></div>`}
   <div class="set-row"><span>${ic('content_paste', 20)}<span>Colar tarefas e hábitos<small style="display:block">texto pronto, montado com o Claude</small></span></span><button class="del" data-openimp>Colar</button></div>
   <div class="set-row"><span>Versão</span><span class="vrow"><small>v${self.APP_VERSION}</small><button class="mini-reset" data-resetall aria-label="Resetar os dados do app" title="Resetar os dados do app">${ic('restart_alt', 16)}</button></span></div>
   <div class="save-row"><button class="save" data-saveset>Pronto</button></div></div>`;
@@ -706,7 +708,7 @@ function startFocus(id, end) {
   if (f) f.end = end.toISOString(); else FOCI.push({ id, start: new Date().toISOString(), end: end.toISOString() });
   delete lastLevel[id]; storeFocus(); closePop(); renderAll(); runFocus();
   // no computador a janelinha flutuante já abre junto, para o tempo continuar à vista com o app minimizado
-  if (!f && canPip() && matchMedia('(min-width:900px) and (pointer:fine)').matches) openPip(true);
+  if (!f && canPip() && (TAURI() || matchMedia('(min-width:900px) and (pointer:fine)').matches)) openPip(true);
   toast(f ? `Agora até ${hhmm(end)}.` : FOCI.length > 1 ? `Mais uma valendo! Até ${hhmm(end)}.` : `Valendo! Até ${hhmm(end)}.`);
 }
 function addSpent(t) { const f = focusOf(t.id); if (f) t.spent = (t.spent || 0) + Math.max(0, Math.round((Date.now() - new Date(f.start)) / 60000)); }
@@ -719,6 +721,7 @@ function stopFocus(id) {
     APP.classList.remove('focusing'); document.title = 'Orbe';
     if (PIPW) { try { PIPW.close(); } catch (e) { /* ignora */ } PIPW = null; }
     if (PIPV && document.pictureInPictureElement === PIPV) document.exitPictureInPicture().catch(() => {});
+    if (TAURI()) { nativeData([]); TAURI().invoke('close_timer').catch(() => {}); }
   } else tickFocus();
   renderAll();
 }
@@ -730,6 +733,25 @@ function focusState(f) {
   const lab = { blue: 'tranquilo', yellow: 'atenção', red: 'finalizando', over: 'passou do horário' }[level];
   return { t, en, left, over, level, lab, pct: Math.max(0, Math.min(100, (1 - r) * 100)), time: over ? '+' + clock(-left) : clock(left), spent: durTxt((now - st) / 60000), end: hhmm(new Date(en)) };
 }
+// app nativo (casca do Android ou do Windows) que abre este mesmo site
+const SHELL = window.ORBE_SHELL || ((m) => (m ? { plat: m[1], v: +m[2] } : null))(/OrbeApp\/(\w+)\/(\d+)/.exec(navigator.userAgent));
+const TAURI = () => (SHELL && SHELL.plat === 'windows' && window.__TAURI__ && window.__TAURI__.core) || null;
+// Windows: a janelinha do cronômetro (timer.html) conta sozinha com o que fica em orbe.fzdata e
+// deixa em orbe.fzcmd o que foi concluído ou parado nela, para o app aplicar aqui.
+let fzData = '';
+function nativeCmds() {
+  if (!TAURI()) return;
+  let cmds = []; try { cmds = JSON.parse(localStorage.getItem('orbe.fzcmd') || '[]'); } catch (e) { cmds = []; }
+  if (!cmds.length) return;
+  localStorage.removeItem('orbe.fzcmd');
+  cmds.forEach((c) => { if (!focusOf(c.id)) return; if (c.do === 'done') focusDone(c.id, c.at); else stopFocus(c.id); });
+}
+function nativeData(L) {
+  if (!TAURI()) return;
+  const d = JSON.stringify(L.map((S) => { const f = focusOf(S.t.id); return { id: S.t.id, t: S.t.t, start: f.start, end: f.end }; }));
+  if (d !== fzData) { fzData = d; try { localStorage.setItem('orbe.fzdata', d); } catch (e) { /* ignora */ } }
+}
+window.addEventListener('storage', (e) => { if (e.key === 'orbe.fzcmd' && e.newValue) tickFocus(); });
 const FCOL = { blue: '#5B9BFF', yellow: '#F2B705', red: '#FF5545', over: '#FF5545' };
 function focusRow(S, pipBtn) {
   const id = S.t.id;
@@ -744,6 +766,7 @@ function focusHTML(L, pip) {
 }
 function focusList() { return FOCI.map(focusState).filter(Boolean).sort((a, b) => a.en - b.en); }
 function tickFocus() {
+  nativeCmds();
   const gone = FOCI.filter((f) => !focusState(f)); if (gone.length) { FOCI = FOCI.filter((f) => focusState(f)); storeFocus(); }
   const L = focusList();
   if (!L.length) { if (gone.length) stopFocus(null); return; }
@@ -756,17 +779,20 @@ function tickFocus() {
     if (was && S.level !== was && (S.level === 'red' || S.level === 'over') && navigator.vibrate) navigator.vibrate(S.level === 'over' ? [200, 120, 200] : 60);
     lastLevel[S.t.id] = S.level;
   });
+  nativeData(L);
   if (PIPW) { PIPW.document.body.innerHTML = focusHTML(L, true); fitPipWin(L.length); }
   if (PIPV) drawPip(L);
 }
 function runFocus() { clearInterval(focusT); if (!FOCI.length) return; tickFocus(); focusT = setInterval(tickFocus, 1000); }
 // flutuar: no computador (Chrome) abre uma janelinha que fica por cima de tudo; no celular usa o
 // modo de vídeo flutuante, desenhando os cronômetros num canvas.
-const canPip = () => 'documentPictureInPicture' in window || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype);
+const canPip = () => (SHELL ? !!TAURI() : 'documentPictureInPicture' in window) || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype);
 const pipH = (n) => 12 + n * 46;
 let pipN = 0;
 function fitPipWin(n) { if (n === pipN || !PIPW) return; pipN = n; try { PIPW.resizeTo(PIPW.outerWidth, pipH(n) + (PIPW.outerHeight - PIPW.innerHeight)); } catch (e) { /* ignora */ } }
 async function openPip(auto) {
+  if (TAURI()) { const L = focusList(); nativeData(L); TAURI().invoke('open_timer', { height: pipH(L.length) }).catch(() => { if (!auto) toast('Não deu para abrir a janelinha.'); }); return; }
+  if (SHELL) return;
   // auto = aberto sozinho ao iniciar no computador (sem aviso se o navegador não deixar)
   if ('documentPictureInPicture' in window) {
     if (PIPW) { if (!auto) PIPW.focus(); return; }
@@ -808,10 +834,11 @@ function drawPip(L) {
     g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(28, y + rh - 14, W - 56, 4); g.fillStyle = c; g.fillRect(28, y + rh - 14, (W - 56) * S.pct / 100, 4);
   });
 }
-function focusDone(id) {
+function focusDone(id, at) {
   const f = focusOf(id), t = f && DB.tasks.find((y) => y.id === id); if (!t) { stopFocus(id); return; }
-  addSpent(t); const mins = Math.round((Date.now() - new Date(f.start)) / 60000);
-  t.done = true; t.doneAt = new Date().toISOString(); if (t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
+  const when = at ? new Date(at) : new Date(), mins = Math.max(0, Math.round((when - new Date(f.start)) / 60000));
+  t.spent = (t.spent || 0) + mins;
+  t.done = true; t.doneAt = when.toISOString(); if (t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
   save(); if (navigator.vibrate) navigator.vibrate(12); stopFocus(id); toast(`Feita em ${durTxt(mins)}.`);
 }
 document.addEventListener('click', (e) => {
@@ -824,6 +851,32 @@ document.addEventListener('click', (e) => {
   else if ((x = c('[data-fedit]'))) openFocusPop(x.dataset.fedit);
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && FOCI.length) tickFocus(); });
+
+/* ---------- app nativo: avisa quando sai uma versão nova da casca ---------- */
+const REL = 'https://github.com/DaviBequer/orbe/releases/latest/download/';
+async function checkShell(force) {
+  if (!SHELL) return;
+  let st = {}; try { st = JSON.parse(localStorage.getItem('orbe.upd') || '{}'); } catch (e) { st = {}; }
+  if (!force && st.at && Date.now() - st.at < 6 * 3600e3) { if (st.n > SHELL.v && !(st.later && Date.now() - st.later < 24 * 3600e3)) askShell(st); return; }
+  try {
+    const r = await fetch('https://api.github.com/repos/DaviBequer/orbe/releases/latest', { cache: 'no-store' });
+    const j = await r.json(), n = +(/app-v(\d+)/.exec(j.tag_name || '') || [])[1] || 0;
+    st = { ...st, n, at: Date.now() }; localStorage.setItem('orbe.upd', JSON.stringify(st));
+    if (n > SHELL.v && (force || !(st.later && Date.now() - st.later < 24 * 3600e3))) askShell(st);
+    else if (force) toast('O app já está na versão mais nova.');
+  } catch (e) { if (force) toast('Sem internet para ver se tem versão nova.'); }
+}
+function askShell(st) {
+  if (layers.length) return;
+  const win = SHELL.plat === 'windows';
+  askConfirm('Versão nova do app', 'Atualizar', () => {
+    if (win && TAURI()) { toast('Baixando… o instalador abre sozinho.'); setTimeout(() => TAURI().invoke('update_app', { url: REL + 'Orbe-instalador.exe' }).catch(() => toast('Não deu para baixar agora.')), 900); }
+    else { toast('Baixando… toque no aviso do download para instalar.'); location.href = REL + 'Orbe.apk'; }
+  }, win ? 'O app baixa o instalador, fecha e abre a instalação. É só confirmar lá.' : 'Vai baixar o arquivo. Depois toque em Abrir e em Atualizar. Os teus dados continuam.', 'Depois');
+  confirmLater = () => { st.later = Date.now(); try { localStorage.setItem('orbe.upd', JSON.stringify(st)); } catch (e) { /* ignora */ } };
+}
+let confirmLater = null;
+if (SHELL) { setTimeout(() => checkShell(false), 4000); document.addEventListener('visibilitychange', () => { if (!document.hidden) checkShell(false); }); }
 
 /* ---------- cliques ---------- */
 APP.addEventListener('click', (e) => {
@@ -843,8 +896,9 @@ APP.addEventListener('click', (e) => {
     startFocus(UI.fstart, d); return;
   }
   if ((x = c('[data-start]'))) { e.stopPropagation(); openFocusPop(x.dataset.start); return; }
-  if (c('[data-confirm]')) { const cb = confirmCb; confirmCb = null; closePop(); if (cb) setTimeout(cb, 50); return; }
-  if (c('.pbd') || c('[data-pclose]')) { closePop(); return; }
+  if (c('[data-updchk]')) { checkShell(true); return; }
+  if (c('[data-confirm]')) { confirmLater = null; const cb = confirmCb; confirmCb = null; closePop(); if (cb) setTimeout(cb, 50); return; }
+  if (c('.pbd') || c('[data-pclose]')) { if (confirmLater) { confirmLater(); confirmLater = null; } closePop(); return; }
   // formulário de tarefa
   if (c('[data-clrtime]')) { UI.form.time = null; rerenderTask(); return; }
   if ((x = c('[data-pick]'))) { readTitle(); if (x.dataset.pick === 'date') { const b = parse(UI.form.date || today()); UI.cm = new Date(b.getFullYear(), b.getMonth(), 1); openPop(calPop()); } else { openPop(timePop()); initWheels(); } return; }

@@ -613,6 +613,7 @@ textarea.imp:focus{border-color:var(--ink)}
 .app.focusing .sheet.full .pn{padding-top:calc(var(--st) + 48px)}
 .fz{font-size:12px;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fq{margin:0 0 10px}
+a.dl{text-decoration:none;display:inline-grid;place-items:center}
 .pipv{position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0;pointer-events:none}
 /* janelinha flutuante do computador: compacta */
 body.pipdoc{margin:0;background:#111214;font-family:Outfit,sans-serif;overflow:hidden}

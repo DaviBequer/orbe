@@ -48,6 +48,18 @@ usuário com o documento inteiro. Cada item tem carimbo `u` (posto em `save()` p
 `DB.del`; `merge()` junta item a item pelo mais recente. Cada conta tem a própria chave local `orbe.v1:<user id>`
 (`orbe.uid` guarda a conta atual; `useAccount()` troca ao entrar/sair); sem conta usa `orbe.v1`. `sync()` só grava na conta atual. Biblioteca supabase-js carregada do jsDelivr só se houver chave.
 
+## Apps nativos (pasta `native/`)
+Cascas que abrem o site publicado (mudanças no site chegam sozinhas): Android com Capacitor (`capacitor.config.json`,
+`android/`, `server.url` = site, user agent `OrbeApp/android/<n>`) e Windows com Tauri (`src-tauri/`, janela "main"
+com o site e `window.ORBE_SHELL = {plat:'windows', v}`; comandos `open_timer(height)`, `close_timer`, `update_app(url)`).
+No site: `SHELL`/`TAURI()` no app.js. Windows: a janelinha `timer.html` (sem bordas, sempre por cima) conta sozinha a
+partir de `localStorage['orbe.fzdata']` e devolve concluir/parar em `orbe.fzcmd` (`nativeData`/`nativeCmds`).
+Versão da casca: `native/shell-version.txt` (inteiro). O workflow `native.yml` monta `Orbe.apk` e `Orbe-instalador.exe`
+a cada push em `native/` e, com número novo, publica a versão `app-v<n>` no GitHub (downloads em
+`releases/latest/download/`). O app confere a API do GitHub (`checkShell`) e pergunta se quer atualizar.
+Só aumente `shell-version.txt` quando mudar a parte nativa. APK assinado com `native/orbe-release.p12` + segredo
+`ORBE_KEY_PASS` (sempre a mesma chave, senão o Android não atualiza por cima).
+
 ## Regra de versão (obrigatória)
 Toda alteração no app: some 1 em `self.APP_VERSION` em `version.js` (número inteiro) e adicione
 `## v<número> — <data>` no topo do `CHANGELOG.md`. A versão dá nome ao cache do `sw.js`; arquivo novo
