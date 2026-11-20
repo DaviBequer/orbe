@@ -144,7 +144,7 @@ function row(t) {
     t.st && t.st.length ? `<span class="stc">${ic('checklist', 13)}${t.st.filter((x) => x.done).length}/${t.st.length}</span>` : '',
   ].join('');
   const subl = t.st && t.st.length && !t.done ? `<div class="subl">${t.st.map((x) => `<button class="sub-it${x.done ? ' done' : ''}" data-stid="${x.id}" data-tid="${t.id}" aria-pressed="${!!x.done}"><span class="sck"></span><span class="stt">${esc(x.t)}</span></button>`).join('')}</div>` : '';
-  const on = FOCUS && FOCUS.id === t.id;
+  const on = !!focusOf(t.id);
   const go = t.done ? '' : `<button class="go${on ? ' on' : ''}" data-start="${t.id}" aria-label="${on ? 'Mudar a hora de acabar' : 'Iniciar esta tarefa'}" title="${on ? 'Fazendo agora' : 'Iniciar'}">${ic(on ? 'timer' : 'play_arrow', 18)}</button>`;
   return `<div class="task q${t.q}${t.done ? ' done' : ''}${ds ? ' due-' + (ds === 'soon' ? 'soon' : 'late') : ''}${on ? ' doing' : ''}" data-id="${t.id}"><button class="ck" aria-label="${t.done ? 'Desmarcar' : 'Concluir'}">${svgi('feito', 15)}</button><div class="tb"><div class="tt">${esc(t.t)}</div><div class="tmeta">${meta}</div>${subl}</div>${go}</div>`;
 }
@@ -678,81 +678,101 @@ function accSheet() {
   return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${SYNC.user ? 'Tua conta' : 'Entrar'}<button class="rbtn" data-closeacc aria-label="Fechar">${ic('close', 18)}</button></h4>${syncSection()}</div>`;
 }
 
-/* ---------- fazendo agora: cronômetro até a hora de acabar ---------- */
-// FOCUS = {id, start, end} (ISO), guardado só neste aparelho. A barra fica por cima de tudo no app e
-// pode flutuar sobre outras janelas (Picture-in-Picture). Cor: azul tranquilo → amarelo atenção → vermelho finalizando.
+/* ---------- fazendo agora: cronômetros até a hora de acabar ---------- */
+// FOCI = [{id, start, end}] (ISO), guardado só neste aparelho; pode ter várias tarefas ao mesmo tempo.
+// A barra fica por cima de tudo no app (uma linha por tarefa, a que acaba antes em cima) e pode flutuar
+// sobre outras janelas (Picture-in-Picture). Cor: azul tranquilo → amarelo atenção → vermelho finalizando.
 const FOCUS_KEY = 'orbe.focus', FMINS = [...Array(12).keys()].map((i) => i * 5);
-let FOCUS = null, focusT = null, PIPW = null, PIPV = null, lastLevel = '';
-try { FOCUS = JSON.parse(localStorage.getItem(FOCUS_KEY) || 'null'); } catch (e) { FOCUS = null; }
+let FOCI = [], focusT = null, PIPW = null, PIPV = null;
+const lastLevel = {};
+try { const v = JSON.parse(localStorage.getItem(FOCUS_KEY) || '[]'); FOCI = Array.isArray(v) ? v : v && v.id ? [v] : []; } catch (e) { FOCI = []; }
+const focusOf = (id) => FOCI.find((f) => f.id === id);
 const hhmm = (d) => pad(d.getHours()) + ':' + pad(d.getMinutes());
 function clock(ms) { const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${pad(m)}:${pad(x)}`; }
 function durTxt(min) { min = Math.max(0, Math.round(min)); return min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${min % 60 ? pad(min % 60) : ''}`; }
 function openFocusPop(id) {
   const t = DB.tasks.find((y) => y.id === id); if (!t) return;
   UI.fstart = id;
-  const on = FOCUS && FOCUS.id === id, base = on ? new Date(FOCUS.end) : new Date(Date.now() + 30 * 60000);
-  if (!on) base.setMinutes(Math.ceil(base.getMinutes() / 5) * 5, 0, 0);
-  openPop(`<div class="calh"><b>${on ? 'Mudar a hora de acabar' : 'Até que horas?'}</b><span class="muted fz">${esc(t.t)}</span></div>
+  const f = focusOf(id), base = f ? new Date(f.end) : new Date(Date.now() + 30 * 60000);
+  if (!f) base.setMinutes(Math.ceil(base.getMinutes() / 5) * 5, 0, 0);
+  openPop(`<div class="calh"><b>${f ? 'Mudar a hora de acabar' : 'Até que horas?'}</b><span class="muted fz">${esc(t.t)}</span></div>
   <div class="quick fq">${[[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 h'], [90, '1h30'], [120, '2 h']].map(([m, l]) => `<button data-fdur="${m}">${l}</button>`).join('')}</div>
   ${wcols(FMINS)}
-  <div class="pact"><button data-pclose>Cancelar</button><button class="pri" data-fset>${on ? 'Mudar' : 'Iniciar'}</button></div>`);
+  <div class="pact">${f ? `<button data-fstop="${id}">Parar</button>` : '<button data-pclose>Cancelar</button>'}<button class="pri" data-fset>${f ? 'Mudar' : 'Iniciar'}</button></div>`);
   initWheels(hhmm(base), FMINS);
 }
 function startFocus(id, end) {
-  const same = FOCUS && FOCUS.id === id;
-  if (FOCUS && !same) { const old = DB.tasks.find((y) => y.id === FOCUS.id); if (old) { addSpent(old); save(); } }
-  FOCUS = { id, start: same ? FOCUS.start : new Date().toISOString(), end: end.toISOString() };
-  lastLevel = ''; storeFocus(); closePop(); renderAll(); runFocus();
-  toast(same ? `Agora até ${hhmm(end)}.` : `Valendo! Até ${hhmm(end)}.`);
+  const f = focusOf(id);
+  if (f) f.end = end.toISOString(); else FOCI.push({ id, start: new Date().toISOString(), end: end.toISOString() });
+  delete lastLevel[id]; storeFocus(); closePop(); renderAll(); runFocus();
+  toast(f ? `Agora até ${hhmm(end)}.` : FOCI.length > 1 ? `Mais uma valendo! Até ${hhmm(end)}.` : `Valendo! Até ${hhmm(end)}.`);
 }
-function addSpent(t) { if (!FOCUS) return; t.spent = (t.spent || 0) + Math.max(0, Math.round((Date.now() - new Date(FOCUS.start)) / 60000)); }
-function storeFocus() { try { FOCUS ? localStorage.setItem(FOCUS_KEY, JSON.stringify(FOCUS)) : localStorage.removeItem(FOCUS_KEY); } catch (e) { /* ignora */ } }
-function stopFocus() {
-  FOCUS = null; storeFocus(); clearInterval(focusT); focusT = null;
-  const b = $('.focus'); if (b) b.classList.remove('on');
-  APP.classList.remove('focusing'); document.title = 'Orbe';
-  if (PIPW) { try { PIPW.close(); } catch (e) { /* ignora */ } PIPW = null; }
-  if (PIPV && document.pictureInPictureElement === PIPV) document.exitPictureInPicture().catch(() => {});
+function addSpent(t) { const f = focusOf(t.id); if (f) t.spent = (t.spent || 0) + Math.max(0, Math.round((Date.now() - new Date(f.start)) / 60000)); }
+function storeFocus() { try { FOCI.length ? localStorage.setItem(FOCUS_KEY, JSON.stringify(FOCI)) : localStorage.removeItem(FOCUS_KEY); } catch (e) { /* ignora */ } }
+function stopFocus(id) {
+  FOCI = FOCI.filter((f) => f.id !== id); delete lastLevel[id]; storeFocus();
+  if (!FOCI.length) {
+    clearInterval(focusT); focusT = null;
+    const b = $('.focus'); if (b) b.classList.remove('on');
+    APP.classList.remove('focusing'); document.title = 'Orbe';
+    if (PIPW) { try { PIPW.close(); } catch (e) { /* ignora */ } PIPW = null; }
+    if (PIPV && document.pictureInPictureElement === PIPV) document.exitPictureInPicture().catch(() => {});
+  } else tickFocus();
   renderAll();
 }
-function focusState() {
-  const t = FOCUS && DB.tasks.find((y) => y.id === FOCUS.id); if (!t || t.done) return null;
-  const now = Date.now(), st = new Date(FOCUS.start).getTime(), en = new Date(FOCUS.end).getTime(), left = en - now, tot = Math.max(60000, en - st);
-  const f = left / tot, over = left <= 0;
-  const level = over ? 'over' : f <= 0.2 || left <= 5 * 60000 ? 'red' : f <= 0.5 ? 'yellow' : 'blue';
+function focusState(f) {
+  const t = DB.tasks.find((y) => y.id === f.id); if (!t || t.done) return null;
+  const now = Date.now(), st = new Date(f.start).getTime(), en = new Date(f.end).getTime(), left = en - now, tot = Math.max(60000, en - st);
+  const r = left / tot, over = left <= 0;
+  const level = over ? 'over' : r <= 0.2 || left <= 5 * 60000 ? 'red' : r <= 0.5 ? 'yellow' : 'blue';
   const lab = { blue: 'tranquilo', yellow: 'atenção', red: 'finalizando', over: 'passou do horário' }[level];
-  return { t, left, over, level, lab, pct: Math.max(0, Math.min(100, (1 - f) * 100)), time: over ? '+' + clock(-left) : clock(left), spent: durTxt((now - st) / 60000), end: hhmm(new Date(en)) };
+  return { t, en, left, over, level, lab, pct: Math.max(0, Math.min(100, (1 - r) * 100)), time: over ? '+' + clock(-left) : clock(left), spent: durTxt((now - st) / 60000), end: hhmm(new Date(en)) };
 }
 const FCOL = { blue: '#1D5FD1', yellow: '#E0A100', red: '#D2291C', over: '#D2291C' };
-function focusHTML(S, pip) {
-  return `<div class="fz-in lv-${S.level}"><div class="fz-txt" data-fedit><small><i></i>${S.lab} · até ${S.end}</small><b>${esc(S.t.t)}</b></div>
-  <div class="fz-time" data-fedit><span>${S.time}</span><small>${S.spent} feitos</small></div>
-  <div class="fz-acts"><button data-fdone aria-label="Concluir tarefa" title="Concluir">${ic('check', 20)}</button>${pip ? '' : canPip() ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 19)}</button>` : ''}<button data-fstop aria-label="Parar" title="Parar">${ic('close', 19)}</button></div>
+function focusRow(S, pipBtn) {
+  const id = S.t.id;
+  return `<div class="fz-in lv-${S.level}"><div class="fz-txt" data-fedit="${id}"><small><i></i>${S.lab} · até ${S.end}</small><b>${esc(S.t.t)}</b></div>
+  <div class="fz-time" data-fedit="${id}"><span>${S.time}</span><small>${S.spent} feitos</small></div>
+  <div class="fz-acts"><button data-fdone="${id}" aria-label="Concluir ${esc(S.t.t)}" title="Concluir">${ic('check', 20)}</button>${pipBtn ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 19)}</button>` : ''}<button data-fstop="${id}" aria-label="Parar ${esc(S.t.t)}" title="Parar">${ic('close', 19)}</button></div>
   <div class="fz-bar"><i style="width:${S.pct}%"></i></div></div>`;
 }
-function tickFocus() {
-  const S = focusState();
-  if (!S) { if (FOCUS) stopFocus(); return; }
-  let b = $('.focus'); if (!b) { b = document.createElement('div'); b.className = 'focus'; b.setAttribute('role', 'timer'); APP.appendChild(b); }
-  b.innerHTML = focusHTML(S); b.classList.add('on'); APP.classList.add('focusing');
-  document.title = `${S.time} · ${S.t.t}`;
-  if (lastLevel && S.level !== lastLevel && (S.level === 'red' || S.level === 'over') && navigator.vibrate) navigator.vibrate(S.level === 'over' ? [200, 120, 200] : 60);
-  lastLevel = S.level;
-  if (PIPW) PIPW.document.body.innerHTML = focusHTML(S, true);
-  if (PIPV) drawPip(S);
+function focusHTML(L, pip) {
+  const head = L.length > 1 ? `<div class="fz-head"><span>${svgi('hora', 15)}Fazendo agora · ${L.length}</span>${!pip && canPip() ? `<button data-fpip aria-label="Flutuar sobre outras janelas" title="Flutuar sobre outras janelas">${ic('picture_in_picture_alt', 17)}Flutuar</button>` : ''}</div>` : '';
+  return `<div class="fz-list${L.length > 1 ? ' multi' : ''}">${head}${L.map((S) => focusRow(S, !pip && L.length === 1 && canPip())).join('')}</div>`;
 }
-function runFocus() { clearInterval(focusT); if (!FOCUS) return; tickFocus(); focusT = setInterval(tickFocus, 1000); }
+function focusList() { return FOCI.map(focusState).filter(Boolean).sort((a, b) => a.en - b.en); }
+function tickFocus() {
+  const gone = FOCI.filter((f) => !focusState(f)); if (gone.length) { FOCI = FOCI.filter((f) => focusState(f)); storeFocus(); }
+  const L = focusList();
+  if (!L.length) { if (gone.length) stopFocus(null); return; }
+  let b = $('.focus'); if (!b) { b = document.createElement('div'); b.className = 'focus'; b.setAttribute('role', 'timer'); APP.appendChild(b); }
+  b.innerHTML = focusHTML(L); b.classList.add('on'); APP.classList.add('focusing');
+  APP.style.setProperty('--fzh', b.offsetHeight + 'px');
+  document.title = L.length > 1 ? `${L[0].time} · ${L.length} tarefas` : `${L[0].time} · ${L[0].t.t}`;
+  L.forEach((S) => {
+    const was = lastLevel[S.t.id];
+    if (was && S.level !== was && (S.level === 'red' || S.level === 'over') && navigator.vibrate) navigator.vibrate(S.level === 'over' ? [200, 120, 200] : 60);
+    lastLevel[S.t.id] = S.level;
+  });
+  if (PIPW) { PIPW.document.body.innerHTML = focusHTML(L, true); fitPipWin(L.length); }
+  if (PIPV) drawPip(L);
+}
+function runFocus() { clearInterval(focusT); if (!FOCI.length) return; tickFocus(); focusT = setInterval(tickFocus, 1000); }
 // flutuar: no computador (Chrome) abre uma janelinha que fica por cima de tudo; no celular usa o
-// modo de vídeo flutuante, desenhando o cronômetro num canvas.
+// modo de vídeo flutuante, desenhando os cronômetros num canvas.
 const canPip = () => 'documentPictureInPicture' in window || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype);
+const pipH = (n) => 104 + (n > 1 ? 34 + (n - 1) * 86 : 0);
+let pipN = 0;
+function fitPipWin(n) { if (n === pipN || !PIPW) return; pipN = n; try { PIPW.resizeTo(PIPW.outerWidth, pipH(n) + (PIPW.outerHeight - PIPW.innerHeight)); } catch (e) { /* ignora */ } }
 async function openPip() {
   try {
     if ('documentPictureInPicture' in window) {
       if (PIPW) { PIPW.focus(); return; }
-      PIPW = await documentPictureInPicture.requestWindow({ width: 380, height: 116 });
+      pipN = FOCI.length;
+      PIPW = await documentPictureInPicture.requestWindow({ width: 400, height: pipH(pipN) });
       [...document.querySelectorAll('link[rel=stylesheet]')].forEach((l) => { const n = PIPW.document.createElement('link'); n.rel = 'stylesheet'; n.href = l.href; PIPW.document.head.appendChild(n); });
       PIPW.document.body.className = 'pipdoc';
-      PIPW.document.body.addEventListener('click', (e) => { const c = (q) => e.target.closest(q); if (c('[data-fdone]')) focusDone(); else if (c('[data-fstop]')) stopFocus(); else window.focus(); });
+      PIPW.document.body.addEventListener('click', (e) => { const c = (q) => e.target.closest(q); let x; if ((x = c('[data-fdone]'))) focusDone(x.dataset.fdone); else if ((x = c('[data-fstop]'))) stopFocus(x.dataset.fstop); else window.focus(); });
       PIPW.addEventListener('pagehide', () => { PIPW = null; });
       tickFocus(); return;
     }
@@ -762,34 +782,50 @@ async function openPip() {
       PIPV._cv = cv; PIPV.srcObject = cv.captureStream(); document.body.appendChild(PIPV);
       PIPV.addEventListener('leavepictureinpicture', () => { PIPV.pause(); });
     }
-    const S = focusState(); if (S) drawPip(S);
+    drawPip(focusList());
     await PIPV.play(); await PIPV.requestPictureInPicture();
   } catch (e) { toast('Este navegador não deixou flutuar.'); }
 }
-function drawPip(S) {
-  const cv = PIPV._cv, g = cv.getContext('2d'), W = cv.width, H = cv.height;
-  g.fillStyle = FCOL[S.level]; g.fillRect(0, 0, W, H);
-  g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '400 30px Outfit, sans-serif'; g.textBaseline = 'top';
-  let tt = S.t.t; while (g.measureText(tt).width > W - 60 && tt.length > 3) tt = tt.slice(0, -2); if (tt !== S.t.t) tt = tt.slice(0, -1) + '…';
-  g.fillText(tt, 30, 26);
-  g.fillStyle = '#fff'; g.font = '300 120px Outfit, sans-serif'; g.fillText(S.time, 26, 70);
-  g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '400 26px Outfit, sans-serif'; g.fillText(`${S.lab} · até ${S.end}`, 30, 212);
-  g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, H - 14, W, 14); g.fillStyle = '#fff'; g.fillRect(0, H - 14, W * S.pct / 100, 14);
+function drawPip(L) {
+  if (!L.length) return;
+  const cv = PIPV._cv, g = cv.getContext('2d'), W = cv.width, n = Math.min(L.length, 4), one = n === 1;
+  const H = one ? 300 : n * 150; if (cv.height !== H) cv.height = H;
+  const rh = H / n, fit = (txt, w) => { let s = txt; while (g.measureText(s).width > w && s.length > 3) s = s.slice(0, -2); return s === txt ? s : s.slice(0, -1) + '…'; };
+  L.slice(0, n).forEach((S, i) => {
+    const y = i * rh;
+    g.fillStyle = FCOL[S.level]; g.fillRect(0, y, W, rh);
+    g.textBaseline = 'top';
+    if (one) {
+      g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '400 30px Outfit, sans-serif'; g.fillText(fit(S.t.t, W - 60), 30, 26);
+      g.fillStyle = '#fff'; g.font = '300 120px Outfit, sans-serif'; g.fillText(S.time, 26, 70);
+      g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '400 26px Outfit, sans-serif'; g.fillText(`${S.lab} · até ${S.end}`, 30, 212);
+    } else {
+      g.font = '300 76px Outfit, sans-serif'; const tw = g.measureText(S.time).width;
+      g.fillStyle = '#fff'; g.fillText(S.time, W - tw - 24, y + 34);
+      g.fillStyle = '#fff'; g.font = '400 32px Outfit, sans-serif'; g.fillText(fit(S.t.t, W - tw - 70), 26, y + 36);
+      g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '400 24px Outfit, sans-serif'; g.fillText(`${S.lab} · até ${S.end}`, 26, y + 82);
+    }
+    const bh = one ? 14 : 8;
+    g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, y + rh - bh, W, bh); g.fillStyle = '#fff'; g.fillRect(0, y + rh - bh, W * S.pct / 100, bh);
+    if (i) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, y, W, 2); }
+  });
 }
-function focusDone() {
-  const t = FOCUS && DB.tasks.find((y) => y.id === FOCUS.id); if (!t) { stopFocus(); return; }
-  addSpent(t); const mins = Math.round((Date.now() - new Date(FOCUS.start)) / 60000);
+function focusDone(id) {
+  const f = focusOf(id), t = f && DB.tasks.find((y) => y.id === id); if (!t) { stopFocus(id); return; }
+  addSpent(t); const mins = Math.round((Date.now() - new Date(f.start)) / 60000);
   t.done = true; t.doneAt = new Date().toISOString(); if (t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
-  save(); if (navigator.vibrate) navigator.vibrate(12); stopFocus(); toast(`Feita em ${durTxt(mins)}.`);
+  save(); if (navigator.vibrate) navigator.vibrate(12); stopFocus(id); toast(`Feita em ${durTxt(mins)}.`);
 }
 document.addEventListener('click', (e) => {
-  const c = (q) => e.target.closest(q); if (!c('.focus')) return;
-  if (c('[data-fdone]')) focusDone();
-  else if (c('[data-fstop]')) askConfirm('Parar o cronômetro?', 'Parar', stopFocus, 'A tarefa continua aberta.');
+  const c = (q) => e.target.closest(q); let x;
+  if ((x = c('.pop [data-fstop]'))) { const id = x.dataset.fstop; closePop(); stopFocus(id); toast('Cronômetro parado.'); return; }
+  if (!c('.focus')) return;
+  if ((x = c('[data-fdone]'))) focusDone(x.dataset.fdone);
+  else if ((x = c('[data-fstop]'))) { const id = x.dataset.fstop, t = DB.tasks.find((y) => y.id === id); askConfirm(`Parar “${t ? t.t : 'a tarefa'}”?`, 'Parar', () => stopFocus(id), 'A tarefa continua aberta.'); }
   else if (c('[data-fpip]')) openPip();
-  else if (c('[data-fedit]') && FOCUS) openFocusPop(FOCUS.id);
+  else if ((x = c('[data-fedit]'))) openFocusPop(x.dataset.fedit);
 });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && FOCUS) tickFocus(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && FOCI.length) tickFocus(); });
 
 /* ---------- cliques ---------- */
 APP.addEventListener('click', (e) => {
@@ -871,7 +907,7 @@ APP.addEventListener('click', (e) => {
   if ((x = c('.ck'))) {
     const r = x.closest('[data-id]'), t = DB.tasks.find((y) => y.id === r.dataset.id); if (!t) return;
     t.done = !t.done; t.doneAt = t.done ? new Date().toISOString() : null;
-    if (t.done && FOCUS && FOCUS.id === t.id) { addSpent(t); stopFocus(); }
+    if (t.done && focusOf(t.id)) { addSpent(t); stopFocus(t.id); }
     if (t.done && t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
     save();
     $$(`.task[data-id="${t.id}"]`).forEach((y) => y.classList.toggle('done', t.done));

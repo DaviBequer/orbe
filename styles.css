@@ -595,19 +595,37 @@ textarea.imp:focus{border-color:var(--ink)}
 .fz-acts button:hover{background:rgba(255,255,255,.28)}
 .fz-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.25)}
 .fz-bar i{display:block;height:100%;background:#fff;transition:width 1s linear}
-.app.focusing .fab{bottom:calc(152px + var(--sbt))}
-.app.focusing .screen,.app.focusing .detail{padding-bottom:calc(180px + var(--sbt))}
+.app.focusing .fab{bottom:calc(86px + var(--fzh,66px) + var(--sbt))}
+.app.focusing .screen,.app.focusing .detail{padding-bottom:calc(120px + var(--fzh,66px) + var(--sbt))}
+/* várias ao mesmo tempo: um cartão escuro com uma linha por tarefa */
+.fz-list{display:flex;flex-direction:column;gap:6px;max-height:58vh;overflow-y:auto;scrollbar-width:none}
+.fz-list.multi{background:var(--dark);padding:6px;border-radius:24px;box-shadow:0 18px 36px -16px rgba(0,0,0,.6)}
+.fz-list.multi .fz-in{border-radius:18px;box-shadow:none;padding:8px 8px 11px 14px;gap:10px}
+.fz-list.multi .fz-time span{font-size:21px}
+.fz-list.multi .fz-acts button{width:32px;height:32px}
+.fz-head{display:flex;align-items:center;justify-content:space-between;color:#fff;font-size:12.5px;padding:2px 4px 2px 10px;opacity:.92}
+.fz-head>span{display:flex;align-items:center;gap:6px}
+.fz-head button{display:flex;align-items:center;gap:5px;border:0;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:12px;padding:5px 11px 5px 9px;border-radius:99px;cursor:pointer}
+.fz-head button:hover{background:rgba(255,255,255,.22)}
 /* com uma janela aberta no celular, a barra sobe e fica compacta */
 .app:has(.sheet.open,.pop.open) .focus{bottom:auto;top:calc(var(--st) + 6px);left:50%;right:auto;transform:translateX(-50%)}
 .app:has(.sheet.open,.pop.open) .fz-txt,.app:has(.sheet.open,.pop.open) .fz-acts,.app:has(.sheet.open,.pop.open) .fz-time small{display:none}
 .app:has(.sheet.open,.pop.open) .fz-in{padding:6px 14px 8px;border-radius:99px}
+.app:has(.sheet.open,.pop.open) .fz-list{flex-direction:row;background:none;padding:0;box-shadow:none;max-height:none}
+.app:has(.sheet.open,.pop.open) .fz-head{display:none}
+.app.focusing .toast{bottom:calc(84px + var(--fzh,66px) + var(--sbt))}
+.app.focusing .sheet.full .pn{padding-top:calc(var(--st) + 52px)}
+.app:has(.sheet.open,.pop.open) .fz-list.multi .fz-in{border-radius:99px;padding:6px 12px 8px;box-shadow:0 8px 20px -10px rgba(0,0,0,.5)}
+.app:has(.sheet.open,.pop.open) .fz-list.multi .fz-time span{font-size:15px}
 .app:has(.sheet.open,.pop.open) .fz-time span{font-size:16px}
 .fz{font-size:12px;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fq{margin:0 0 10px}
 .pipv{position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0;pointer-events:none}
 /* janelinha flutuante do computador */
 body.pipdoc{margin:0;background:#111;font-family:Outfit,sans-serif;overflow:hidden}
-body.pipdoc .fz-in{height:100vh;box-sizing:border-box;border-radius:0;box-shadow:none}
+body.pipdoc .fz-list{max-height:none;height:100vh;box-sizing:border-box}
+body.pipdoc .fz-list:not(.multi) .fz-in{height:100vh;box-sizing:border-box;border-radius:0;box-shadow:none}
+body.pipdoc .fz-list.multi{border-radius:0;box-shadow:none}
 body.pipdoc .fz-time span{font-size:30px}
 
 /* ---------- base das colunas (celular: tudo empilhado) ---------- */
@@ -742,13 +760,20 @@ body.pipdoc .fz-time span{font-size:30px}
 /* telas bem largas: aproveita a largura toda */
 @media (min-width:900px){
   .focus{left:auto;right:28px;bottom:24px;width:400px}
-  .app.focusing .screen,.app.focusing .detail{padding-bottom:130px}
   .app:has(.sheet.open,.pop.open) .focus{top:auto;bottom:24px;left:auto;right:28px;transform:none}
   .app:has(.sheet.open,.pop.open) .fz-txt,.app:has(.sheet.open,.pop.open) .fz-acts{display:block}
   .app:has(.sheet.open,.pop.open) .fz-acts{display:flex}
   .app:has(.sheet.open,.pop.open) .fz-time small{display:block}
   .app:has(.sheet.open,.pop.open) .fz-in{padding:10px 10px 13px 16px;border-radius:20px}
   .app:has(.sheet.open,.pop.open) .fz-time span{font-size:24px}
+  .app:has(.sheet.open,.pop.open) .fz-list{flex-direction:column}
+  .app:has(.sheet.open,.pop.open) .fz-list.multi{background:var(--dark);padding:6px}
+  .app:has(.sheet.open,.pop.open) .fz-head{display:flex}
+  .app.focusing .sheet.full .pn{padding-top:20px}
+  .app.focusing .toast{bottom:24px}
+  .app:has(.sheet.open,.pop.open) .fz-list.multi .fz-in{border-radius:18px;padding:8px 8px 11px 14px}
+  .app:has(.sheet.open,.pop.open) .fz-list.multi .fz-time span{font-size:21px}
+  .app.focusing .screen,.app.focusing .detail{padding-bottom:calc(60px + var(--fzh,66px))}
 }
 @media (min-width:1400px){
   .cols{gap:40px}

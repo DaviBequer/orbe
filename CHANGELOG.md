@@ -2,6 +2,13 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v24 — 2026-11-20
+- Fazendo agora com **várias tarefas ao mesmo tempo**: cada uma tem o seu cronômetro e a sua cor, uma embaixo
+  da outra num cartão escuro "Fazendo agora · N", com a que acaba antes em cima.
+- Cada linha tem os seus botões de concluir e parar; "Flutuar" leva todas para a janelinha por cima das outras janelas.
+- Com uma janela do app aberta no celular, os tempos viram pílulas lado a lado no topo, sem tapar o título.
+- O aviso (toast) aparece acima do cartão, sem cobrir os cronômetros.
+
 ## v23 — 2026-11-20
 - **Fazendo agora:** botão ▷ em cada tarefa aberta. Ao iniciar, o app pergunta até que horas
   (atalhos de 15 min a 2 h ou a hora exata) e mostra uma barra por cima de tudo com a contagem regressiva,
