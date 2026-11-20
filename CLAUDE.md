@@ -33,6 +33,7 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva
   `.focus` (z-index 11; com mais de uma, cartão escuro `.fz-list.multi` com uma linha por tarefa, a que acaba antes em cima;
   pílulas no topo quando há janela aberta no celular; altura em `--fzh`); cores por `focusState()` (azul → amarelo ≤50% → vermelho ≤20%/5 min → passou).
   Flutuar: `openPip()` usa Document Picture-in-Picture (Chrome do computador) ou vídeo PiP de um canvas (`drawPip`, celular).
+  No computador (≥900px e mouse) `startFocus` já chama `openPip(true)`; se o Document PiP falhar, tenta o vídeo PiP.
   Concluir soma os minutos em `t.spent`.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).

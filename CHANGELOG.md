@@ -2,6 +2,11 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v25 — 2026-11-20
+- No computador, ao iniciar uma tarefa a **janelinha flutuante já abre sozinha**: o cronômetro continua à vista
+  por cima de tudo mesmo com o Orbe minimizado.
+- Se o navegador não abrir a janelinha, o app tenta o modo de vídeo flutuante.
+
 ## v24 — 2026-11-20
 - Fazendo agora com **várias tarefas ao mesmo tempo**: cada uma tem o seu cronômetro e a sua cor, uma embaixo
   da outra num cartão escuro "Fazendo agora · N", com a que acaba antes em cima.

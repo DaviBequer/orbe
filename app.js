@@ -705,6 +705,8 @@ function startFocus(id, end) {
   const f = focusOf(id);
   if (f) f.end = end.toISOString(); else FOCI.push({ id, start: new Date().toISOString(), end: end.toISOString() });
   delete lastLevel[id]; storeFocus(); closePop(); renderAll(); runFocus();
+  // no computador a janelinha flutuante já abre junto, para o tempo continuar à vista com o app minimizado
+  if (!f && canPip() && matchMedia('(min-width:900px) and (pointer:fine)').matches) openPip(true);
   toast(f ? `Agora até ${hhmm(end)}.` : FOCI.length > 1 ? `Mais uma valendo! Até ${hhmm(end)}.` : `Valendo! Até ${hhmm(end)}.`);
 }
 function addSpent(t) { const f = focusOf(t.id); if (f) t.spent = (t.spent || 0) + Math.max(0, Math.round((Date.now() - new Date(f.start)) / 60000)); }
@@ -764,10 +766,11 @@ const canPip = () => 'documentPictureInPicture' in window || (document.pictureIn
 const pipH = (n) => 104 + (n > 1 ? 34 + (n - 1) * 86 : 0);
 let pipN = 0;
 function fitPipWin(n) { if (n === pipN || !PIPW) return; pipN = n; try { PIPW.resizeTo(PIPW.outerWidth, pipH(n) + (PIPW.outerHeight - PIPW.innerHeight)); } catch (e) { /* ignora */ } }
-async function openPip() {
-  try {
-    if ('documentPictureInPicture' in window) {
-      if (PIPW) { PIPW.focus(); return; }
+async function openPip(auto) {
+  // auto = aberto sozinho ao iniciar no computador (sem aviso se o navegador não deixar)
+  if ('documentPictureInPicture' in window) {
+    if (PIPW) { if (!auto) PIPW.focus(); return; }
+    try {
       pipN = FOCI.length;
       PIPW = await documentPictureInPicture.requestWindow({ width: 400, height: pipH(pipN) });
       [...document.querySelectorAll('link[rel=stylesheet]')].forEach((l) => { const n = PIPW.document.createElement('link'); n.rel = 'stylesheet'; n.href = l.href; PIPW.document.head.appendChild(n); });
@@ -775,7 +778,10 @@ async function openPip() {
       PIPW.document.body.addEventListener('click', (e) => { const c = (q) => e.target.closest(q); let x; if ((x = c('[data-fdone]'))) focusDone(x.dataset.fdone); else if ((x = c('[data-fstop]'))) stopFocus(x.dataset.fstop); else window.focus(); });
       PIPW.addEventListener('pagehide', () => { PIPW = null; });
       tickFocus(); return;
-    }
+    } catch (e) { PIPW = null; /* tenta o modo de vídeo abaixo */ }
+  }
+  if (PIPV && document.pictureInPictureElement === PIPV) return;
+  try {
     if (!PIPV) {
       const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300;
       PIPV = document.createElement('video'); PIPV.muted = true; PIPV.playsInline = true; PIPV.className = 'pipv';
@@ -784,7 +790,7 @@ async function openPip() {
     }
     drawPip(focusList());
     await PIPV.play(); await PIPV.requestPictureInPicture();
-  } catch (e) { toast('Este navegador não deixou flutuar.'); }
+  } catch (e) { if (!auto) toast('Este navegador não deixou flutuar.'); }
 }
 function drawPip(L) {
   if (!L.length) return;
