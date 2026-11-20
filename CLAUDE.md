@@ -57,6 +57,10 @@ partir de `localStorage['orbe.fzdata']` e devolve concluir/parar em `orbe.fzcmd`
 Versão da casca: `native/shell-version.txt` (inteiro). O workflow `native.yml` monta `Orbe.apk` e `Orbe-instalador.exe`
 a cada push em `native/` e, com número novo, publica a versão `app-v<n>` no GitHub (downloads em
 `releases/latest/download/`). O app confere a API do GitHub (`checkShell`) e pergunta se quer atualizar.
+Android (app 2+): ponte `window.OrbeAndroid` (`OrbeBridge.java`: `setTimers`, `setWidget`, `takeCmds`, `canOverlay`,
+`askOverlay`, `askNotify`); `TimerService` (serviço com notificação em contagem regressiva + janelinha por cima dos apps
+quando o Orbe não está na tela); widget `TasksWidget`/`WidgetService` com os dados de `widgetPush()` (concluir no widget
+vira pedido `taskdone`, aplicado por `androidCmds()`). No site: `AND()`, `androidFloat()`.
 Só aumente `shell-version.txt` quando mudar a parte nativa. APK assinado com `native/orbe-release.p12` + segredo
 `ORBE_KEY_PASS` (sempre a mesma chave, senão o Android não atualiza por cima).
 

@@ -481,7 +481,7 @@ const R = { home, agenda, areas, habits, stats };
 function anim(el) { requestAnimationFrame(() => requestAnimationFrame(() => $$('.bar i[data-w]', el).forEach((b) => (b.style.width = b.dataset.w + '%')))); }
 function render(s, keep = true) {
   if (s === 'habits') { const w0 = $('.hmx-wrap'); const sl = w0 ? w0.scrollLeft : null, keepX = UI.hkeep; UI.hkeep = false; setTimeout(() => { const w = $('.hmx-wrap.month'); if (!w) return; if (keepX && sl !== null) { w.scrollLeft = sl; return; } const t = w.querySelector('th.t'); if (t) w.scrollLeft = t.offsetLeft - w.clientWidth / 2; }, 0); } const el = $(`[data-s="${s}"]`); const sc = el.scrollTop; el.innerHTML = R[s](); if (keep) el.scrollTop = sc; anim(el); }
-function renderAll() { Object.keys(R).forEach((s) => render(s)); if (UI.det) renderDet(); }
+function renderAll() { Object.keys(R).forEach((s) => render(s)); if (UI.det) renderDet(); if (typeof widgetPush === 'function') widgetPush(); }
 function renderDet(keep = true) { const el = $('.detail'); const sc = el.scrollTop; el.innerHTML = detail(); if (keep) el.scrollTop = sc; }
 function go(tab) {
   UI.tab = tab;
@@ -708,7 +708,7 @@ function startFocus(id, end) {
   if (f) f.end = end.toISOString(); else FOCI.push({ id, start: new Date().toISOString(), end: end.toISOString() });
   delete lastLevel[id]; storeFocus(); closePop(); renderAll(); runFocus();
   // no computador a janelinha flutuante já abre junto, para o tempo continuar à vista com o app minimizado
-  if (!f && canPip() && (TAURI() || matchMedia('(min-width:900px) and (pointer:fine)').matches)) openPip(true);
+  if (!f && canPip() && (TAURI() || AND() || matchMedia('(min-width:900px) and (pointer:fine)').matches)) openPip(true);
   toast(f ? `Agora até ${hhmm(end)}.` : FOCI.length > 1 ? `Mais uma valendo! Até ${hhmm(end)}.` : `Valendo! Até ${hhmm(end)}.`);
 }
 function addSpent(t) { const f = focusOf(t.id); if (f) t.spent = (t.spent || 0) + Math.max(0, Math.round((Date.now() - new Date(f.start)) / 60000)); }
@@ -721,7 +721,7 @@ function stopFocus(id) {
     APP.classList.remove('focusing'); document.title = 'Orbe';
     if (PIPW) { try { PIPW.close(); } catch (e) { /* ignora */ } PIPW = null; }
     if (PIPV && document.pictureInPictureElement === PIPV) document.exitPictureInPicture().catch(() => {});
-    if (TAURI()) { nativeData([]); TAURI().invoke('close_timer').catch(() => {}); }
+    nativeData([]); if (TAURI()) TAURI().invoke('close_timer').catch(() => {});
   } else tickFocus();
   renderAll();
 }
@@ -736,6 +736,8 @@ function focusState(f) {
 // app nativo (casca do Android ou do Windows) que abre este mesmo site
 const SHELL = window.ORBE_SHELL || ((m) => (m ? { plat: m[1], v: +m[2] } : null))(/OrbeApp\/(\w+)\/(\d+)/.exec(navigator.userAgent));
 const TAURI = () => (SHELL && SHELL.plat === 'windows' && window.__TAURI__ && window.__TAURI__.core) || null;
+// Android (app 2+): ponte nativa para o cronômetro por cima dos apps, a notificação e o widget
+const AND = () => (SHELL && SHELL.plat === 'android' && window.OrbeAndroid) || null;
 // Windows: a janelinha do cronômetro (timer.html) conta sozinha com o que fica em orbe.fzdata e
 // deixa em orbe.fzcmd o que foi concluído ou parado nela, para o app aplicar aqui.
 let fzData = '';
@@ -747,9 +749,49 @@ function nativeCmds() {
   cmds.forEach((c) => { if (!focusOf(c.id)) return; if (c.do === 'done') focusDone(c.id, c.at); else stopFocus(c.id); });
 }
 function nativeData(L) {
-  if (!TAURI()) return;
+  if (!TAURI() && !AND()) return;
   const d = JSON.stringify(L.map((S) => { const f = focusOf(S.t.id); return { id: S.t.id, t: S.t.t, start: f.start, end: f.end }; }));
-  if (d !== fzData) { fzData = d; try { localStorage.setItem('orbe.fzdata', d); } catch (e) { /* ignora */ } }
+  if (d === fzData) return;
+  fzData = d;
+  if (TAURI()) try { localStorage.setItem('orbe.fzdata', d); } catch (e) { /* ignora */ }
+  if (AND()) try { AND().setTimers(d); } catch (e) { /* ignora */ }
+}
+// Android: concluir no widget fica guardado no aparelho e é aplicado aqui quando o Orbe abre
+function androidCmds() {
+  if (!AND()) return;
+  let cmds = []; try { cmds = JSON.parse(AND().takeCmds() || '[]'); } catch (e) { cmds = []; }
+  let n = 0;
+  cmds.forEach((c) => {
+    const t = c.do === 'taskdone' && DB.tasks.find((y) => y.id === c.id); if (!t || t.done) return;
+    if (focusOf(t.id)) { addSpent(t); FOCI = FOCI.filter((f) => f.id !== t.id); storeFocus(); }
+    t.done = true; t.doneAt = c.at || new Date().toISOString();
+    if (t.st) t.st.forEach((x) => { if (!x.done) { x.done = true; x.doneAt = t.doneAt; } });
+    n++;
+  });
+  if (n) { save(); renderAll(); toast(n === 1 ? 'Concluída pelo widget.' : `${n} concluídas pelo widget.`); }
+}
+// Android: o que aparece no widget "Hoje" (abertas de hoje e atrasadas, por prioridade)
+let wgData = '';
+function widgetPush() {
+  if (!AND() || !AND().setWidget) return;
+  const t0 = today();
+  const td = DB.tasks.filter((t) => t.date === t0 || isLate(t) || (t.done && t.doneAt && t.doneAt.slice(0, 10) === t0 && t.date && t.date < t0));
+  const tu = units(td);
+  const items = td.filter((t) => !t.done).sort(byQ).map((t) => {
+    const ds = dueState(t);
+    return { id: t.id, t: t.t, m: [t.time, ds === 'late' ? 'vencida' : '', t.st && t.st.length ? `${t.st.filter((x) => x.done).length}/${t.st.length}` : ''].filter(Boolean).join(' · '), late: ds === 'late' || ds === 'late-hour', soon: ds === 'soon', subs: (t.st || []).filter((x) => !x.done).length };
+  });
+  const d = JSON.stringify({ date: t0, done: tu.filter((t) => t.done).length, total: tu.length, items });
+  if (d === wgData) return;
+  wgData = d;
+  try { AND().setWidget(d); } catch (e) { /* ignora */ }
+}
+function androidFloat(auto) {
+  try { AND().askNotify(); } catch (e) { /* ignora */ }
+  if (AND().canOverlay()) { if (!auto) toast('Pronto: ao sair do Orbe, o cronômetro fica por cima dos outros apps.'); return; }
+  if (auto) { try { if (localStorage.getItem('orbe.ovask')) return; localStorage.setItem('orbe.ovask', '1'); } catch (e) { /* ignora */ } }
+  setTimeout(() => askConfirm('Cronômetro por cima dos apps?', 'Permitir', () => AND().askOverlay(),
+    'O Android vai abrir um ajuste: ative "Permitir sobreposição a outros apps" para o Orbe e volte. Depois, ao sair do Orbe, o tempo fica numa janelinha por cima de tudo.', 'Agora não'), auto ? 1400 : 0);
 }
 window.addEventListener('storage', (e) => { if (e.key === 'orbe.fzcmd' && e.newValue) tickFocus(); });
 const FCOL = { blue: '#5B9BFF', yellow: '#F2B705', red: '#FF5545', over: '#FF5545' };
@@ -766,7 +808,7 @@ function focusHTML(L, pip) {
 }
 function focusList() { return FOCI.map(focusState).filter(Boolean).sort((a, b) => a.en - b.en); }
 function tickFocus() {
-  nativeCmds();
+  nativeCmds(); androidCmds();
   const gone = FOCI.filter((f) => !focusState(f)); if (gone.length) { FOCI = FOCI.filter((f) => focusState(f)); storeFocus(); }
   const L = focusList();
   if (!L.length) { if (gone.length) stopFocus(null); return; }
@@ -786,12 +828,13 @@ function tickFocus() {
 function runFocus() { clearInterval(focusT); if (!FOCI.length) return; tickFocus(); focusT = setInterval(tickFocus, 1000); }
 // flutuar: no computador (Chrome) abre uma janelinha que fica por cima de tudo; no celular usa o
 // modo de vídeo flutuante, desenhando os cronômetros num canvas.
-const canPip = () => (SHELL ? !!TAURI() : 'documentPictureInPicture' in window) || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype);
+const canPip = () => (SHELL ? !!(TAURI() || AND()) : 'documentPictureInPicture' in window || (document.pictureInPictureEnabled && 'captureStream' in HTMLCanvasElement.prototype));
 const pipH = (n) => 12 + n * 46;
 let pipN = 0;
 function fitPipWin(n) { if (n === pipN || !PIPW) return; pipN = n; try { PIPW.resizeTo(PIPW.outerWidth, pipH(n) + (PIPW.outerHeight - PIPW.innerHeight)); } catch (e) { /* ignora */ } }
 async function openPip(auto) {
   if (TAURI()) { const L = focusList(); nativeData(L); TAURI().invoke('open_timer', { height: pipH(L.length) }).catch(() => { if (!auto) toast('Não deu para abrir a janelinha.'); }); return; }
+  if (AND()) { androidFloat(auto); return; }
   if (SHELL) return;
   // auto = aberto sozinho ao iniciar no computador (sem aviso se o navegador não deixar)
   if ('documentPictureInPicture' in window) {
@@ -1075,7 +1118,8 @@ APP.addEventListener('drop', (e) => {
 
 /* atualiza ao voltar para o app (virada do dia, contagem "em 1h20") */
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
-setInterval(() => { if (!document.hidden && UI.tab === 'home') render('home'); }, 60000);
+setInterval(() => { if (!document.hidden && UI.tab === 'home') render('home'); widgetPush(); }, 60000);
+if (AND()) { androidCmds(); widgetPush(); fzData = ''; nativeData(focusList()); document.addEventListener('visibilitychange', () => { if (!document.hidden) { androidCmds(); widgetPush(); } }); }
 runFocus();
 
 /* ---------- sincronização (Supabase) ---------- */

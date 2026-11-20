@@ -4,4 +4,5 @@
     <string name="title_activity_main">Orbe</string>
     <string name="package_name">io.github.davibequer.orbe</string>
     <string name="custom_url_scheme">io.github.davibequer.orbe</string>
+    <string name="widget_desc">O que falta fazer hoje</string>
 </resources>

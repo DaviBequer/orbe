@@ -2,6 +2,13 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v28 — 2026-11-20
+- **Android (app 2):** cronômetro fora do app. Notificação com contagem regressiva (barra e tela de bloqueio) e,
+  com a permissão "aparecer sobre outros apps", uma janelinha preta por cima de tudo quando o Orbe sai da tela
+  (arrastar move, tocar abre o Orbe). O app pede a permissão na primeira vez que você inicia uma tarefa.
+- **Widget "Hoje" no Android:** lista o que falta fazer hoje e o que está atrasado, com o progresso do dia;
+  tocar no círculo conclui (vale no Orbe quando ele abrir).
+
 ## v27 — 2026-11-20
 - **Apps nativos** (pasta `native/`): APK do Android (Capacitor) e instalador do Windows (Tauri), montados pelo
   GitHub Actions (`native.yml`). A casca abre o site publicado, então as atualizações do site chegam sozinhas.

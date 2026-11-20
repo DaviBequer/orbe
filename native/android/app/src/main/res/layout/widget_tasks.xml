@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/widget_bg"
+    android:paddingStart="16dp" android:paddingEnd="12dp" android:paddingTop="14dp" android:paddingBottom="8dp">
+    <LinearLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Hoje" android:textColor="#FFFFFF" android:textSize="16sp" android:fontFamily="sans-serif-light" />
+        <TextView android:id="@+id/count" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:gravity="end" android:textColor="#80FFFFFF" android:textSize="12sp" android:singleLine="true" />
+    </LinearLayout>
+    <ProgressBar android:id="@+id/prog" style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent" android:layout_height="3dp" android:layout_marginTop="8dp" android:layout_marginBottom="4dp"
+        android:layout_marginEnd="4dp" android:max="1" android:progress="0" android:progressDrawable="@drawable/widget_progress" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:divider="@null" android:dividerHeight="0dp" android:scrollbars="none" />
+        <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:gravity="center" android:textColor="#80FFFFFF" android:textSize="13sp" />
+    </FrameLayout>
+</LinearLayout>
