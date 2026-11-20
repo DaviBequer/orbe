@@ -23,9 +23,9 @@ android {
             // Sempre a mesma chave: sem isso o Android não aceita instalar a versão nova por cima da antiga.
             storeFile file('../../orbe-release.p12')
             storeType 'pkcs12'
-            storePassword (System.getenv('ORBE_KEY_PASS') ?: '').trim()
+            storePassword = (System.getenv('ORBE_KEY_PASS') ?: '').trim()
             keyAlias 'orbe'
-            keyPassword (System.getenv('ORBE_KEY_PASS') ?: '').trim()
+            keyPassword = (System.getenv('ORBE_KEY_PASS') ?: '').trim()
         }
     }
     buildTypes {
