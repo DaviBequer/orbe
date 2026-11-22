@@ -48,18 +48,18 @@ const DEFAULT = () => ({
     { k: 'pes', n: 'Pessoal', i: 'person', c: '#0F5463', subs: ['Saúde', 'Casa', 'Finanças'] },
     { k: 'esp', n: 'Espiritual', i: 'wb_twilight', c: '#7A7D82', subs: ['Leitura', 'Oração', 'Igreja'] },
   ],
-  tasks: [], notes: [], habits: [],
+  tasks: [], notes: [], habits: [], goals: [],
 });
 let DB;
 try { DB = JSON.parse(localStorage.getItem(KEY)) || DEFAULT(); } catch (e) { DB = DEFAULT(); }
 fixDB();
 // v10: ícones novos das áreas que vieram prontas (só se ainda estiverem com o ícone antigo)
 function fixDB() {
-  DB.habits = DB.habits || []; DB.tasks = DB.tasks || []; DB.notes = DB.notes || []; DB.areas = DB.areas || [];
+  DB.habits = DB.habits || []; DB.goals = DB.goals || []; DB.tasks = DB.tasks || []; DB.notes = DB.notes || []; DB.areas = DB.areas || [];
   DB.areas.forEach((a) => { if (a.k === 'pro' && a.i === 'work') a.i = 'business_center'; if (a.k === 'esp' && a.i === 'self_improvement') a.i = 'wb_twilight'; });
 }
 /* Cada mudança ganha um carimbo de tempo (u) e cada exclusão vira uma marca em DB.del, para juntar celular e computador. */
-const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k'], ['habits', 'id']];
+const COLS = [['tasks', 'id'], ['notes', 'id'], ['areas', 'k'], ['habits', 'id'], ['goals', 'id']];
 const strip = (o) => { const { u, ...r } = o; return JSON.stringify(r); };
 function snapshot() { const sn = { name: DB.name }; COLS.forEach(([c, id]) => { sn[c] = {}; (DB[c] || []).forEach((x) => (sn[c][x[id]] = strip(x))); }); return sn; }
 let SNAP = snapshot();
@@ -99,6 +99,7 @@ const PEN = '<g class="pen ao"><path class="f" d="M0 0l5.5-5.5 1.8 1.8L1.8 1.8 0
 const NOTE_P = '<path d="M5 4h14a1 1 0 0 1 1 1v9.5L14.5 20H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14.5 20v-4.5a1 1 0 0 1 1-1H20M8 9h8M8 12.5h5"/>';
 const DAYS = '<circle cx="8" cy="13.5" r=".9" class="f"/><circle cx="12" cy="13.5" r=".9" class="f"/><circle cx="16" cy="13.5" r=".9" class="f"/><circle cx="8" cy="17" r=".9" class="f"/><circle cx="12" cy="17" r=".9" class="f"/>';
 const SV = {
+  metas: '<circle cx="12" cy="12" r="8.5"/><circle class="g2" cx="12" cy="12" r="5"/><circle class="g3 f" cx="12" cy="12" r="1.6"/>',
   foco: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/><path class="dr f" d="M10 20v-5h4v5z"/>',
   planos: '<rect x="4" y="5" width="16" height="15.5" rx="2"/><path d="M8 3v4M16 3v4"/><path class="l1" pathLength="1" d="M8 11h8"/><path class="l2" pathLength="1" d="M8 14h5.5"/><path class="l3" pathLength="1" d="M8 17h7"/>',
   caderno: `<path d="${BOOK_L}"/><path d="${BOOK_R}"/><path d="M12 6.5v13"/>` + [0, 1, 2, 3, 4].map((i) => `<path class="q${i} ao pg" d="${PAGE_R}"/>`).join(''),
@@ -117,7 +118,7 @@ const SV = {
 const svgi = (n, s = 20, run = false) => `<svg class="ic i-${n}${run ? ' run' : ''}" style="--s:${s}px" viewBox="0 0 24 24" aria-hidden="true">${SV[n]}</svg>`;
 function playIc(el) { if (!el) return; const svg = el.matches && el.matches('svg.ic') ? el : el.querySelector && el.querySelector('svg.ic'); if (!svg) return; svg.classList.remove('run'); void svg.getBoundingClientRect(); svg.classList.add('run'); }
 function playFill(el) { const m = el && el.querySelector('.ms'); if (!m) return; m.classList.remove('fillnow'); void m.offsetWidth; m.classList.add('fillnow'); }
-const TABI = { home: 'foco', agenda: 'planos', areas: 'caderno', habits: 'constancia', stats: 'pulso' };
+const TABI = { home: 'foco', agenda: 'planos', goals: 'metas', areas: 'caderno', habits: 'constancia', stats: 'pulso' };
 const mini = (q, s = 12) => `<svg class="mini q${q}" width="${s}" height="${s}" viewBox="0 0 14 14" aria-hidden="true">${[[0, 0], [8, 0], [0, 8], [8, 8]].map(([x, y], i) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="5.5" height="5.5" rx="1.4"${i === q - 1 ? ' class="f"' : ''}/>`).join('')}</svg>`;
 const byQ = (a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || a.q - b.q || ((a.time || '99') < (b.time || '99') ? -1 : 1);
 const sig = (t) => (t.done ? '×' : t.time ? '○' : '•');
@@ -476,19 +477,226 @@ function toggleHab(id, s) {
   UI.hkeep = true; save(); render('habits'); render('home');
 }
 
+/* ---------- METAS ----------
+   Meta sem prazo é fantasia. Com prazo, objetivo. Com prazo e plano, estratégia.
+   Com prazo, plano e constância (hábitos ligados em dia), sucesso.
+   DB.goals = [{id, t, why, a, due, how, steps:[{id, t, done, doneAt, task}], habits:[id do hábito], created}] */
+const GL = [
+  { k: 'Fantasia', d: 'só a meta', next: 'sobe com um prazo' },
+  { k: 'Objetivo', d: '+ prazo', next: 'sobe com um plano' },
+  { k: 'Estratégia', d: '+ plano', next: 'sobe com constância' },
+  { k: 'Sucesso', d: '+ constância', next: 'no caminho' },
+];
+const GQUOTE = 'Meta sem prazo é fantasia. Com prazo, objetivo. Com prazo e plano, estratégia. Com tudo isso e constância, sucesso.';
+const goalOf = (id) => DB.goals.find((g) => g.id === id);
+function gSteps(g) { return (g.steps || []).map((s) => { const t = s.task && DB.tasks.find((x) => x.id === s.task); return { ...s, linked: t || null, done: t ? !!t.done : !!s.done }; }); }
+function gHabits(g) { return (g.habits || []).map((id) => DB.habits.find((h) => h.id === id)).filter(Boolean); }
+// constância: parte dos últimos 14 dias em que os hábitos ligados foram feitos (ou evitados, nos de cortar)
+function gConst(g) {
+  const hs = gHabits(g); if (!hs.length) return null;
+  const t0 = today(); let ok = 0, n = 0;
+  hs.forEach((h) => {
+    const st = hStart(h);
+    for (let i = 0; i < 14; i++) {
+      const d = addDays(t0, -i); if (d < st) continue;
+      const m = hMarked(h, d);
+      if (i === 0 && !m && h.type !== 'bad') continue; // hoje ainda dá tempo
+      n++; if (h.type === 'bad' ? !m : m) ok++;
+    }
+  });
+  const streak = Math.max(0, ...hs.map((h) => (hScore(h).info || {}).cur || 0));
+  return { pct: n ? ok / n : 0, n, streak };
+}
+function gLevel(g) {
+  if (!g.due) return 0;
+  if (!(g.steps || []).length) return 1;
+  const c = gConst(g);
+  return c && c.n && c.pct >= 0.5 ? 3 : 2;
+}
+function gDays(g) { return g.due ? dayDiff(today(), g.due) : null; }
+const fmtLong = (s) => { const d = parse(s); return `${d.getDate()} de ${MOF[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`; };
+const fmtShort = (s) => { const d = parse(s); return `${d.getDate()} ${MO[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}`; };
+function gLeft(g) { const n = gDays(g); return n === null ? '' : n > 0 ? `faltam ${pl(n, 'dia', 'dias')}` : n === 0 ? 'vence hoje' : `venceu há ${pl(-n, 'dia', 'dias')}`; }
+function gBars(lv, dark) { return `<div class="gbars${dark ? ' dk' : ''}">${[0, 1, 2, 3].map((i) => `<span class="${i <= lv ? 'on' : ''}"></span>`).join('')}</div>`; }
+// o que falta para subir de degrau (texto + ação)
+function gMissing(g) {
+  const lv = gLevel(g);
+  if (lv === 0) return { txt: 'Sem prazo, ainda é uma fantasia.', btn: 'Dar um prazo', icon: 'calendar_month', act: `data-gdue="${g.id}"`, dark: true };
+  if (lv === 1) return { btn: 'Falta um plano: quebrar em etapas', icon: 'format_list_bulleted', act: `data-gopen="${g.id}" data-gfocus="step"` };
+  if (lv === 2) { const c = gConst(g); return { btn: c ? `Constância baixa: ${Math.round(c.pct * 100)}% em 14 dias` : 'Falta constância: ligar um hábito', icon: 'check', act: `data-gopen="${g.id}" data-gfocus="hab"` }; }
+  return null;
+}
+function goalCard(g) {
+  const lv = gLevel(g), st = gSteps(g), c = gConst(g), m = gMissing(g), fant = lv === 0;
+  const info = [
+    g.due ? `<span class="${gDays(g) < 0 ? 'late' : ''}">Prazo ${fmtShort(g.due)} · ${gLeft(g)}</span>` : '',
+    st.length ? `<span>Plano ${st.filter((x) => x.done).length} de ${st.length}</span>` : '',
+    c && c.streak ? `<span>Constância ${pl(c.streak, 'dia seguido', 'dias seguidos')}</span>` : '',
+  ].join('');
+  return `<div class="gcard${fant ? ' fant' : ''}" data-gopen="${g.id}"><div class="gch"><b>${esc(g.t)}</b><span class="glv l${lv}">${GL[lv].k}</span></div>${gBars(lv)}
+    ${info ? `<div class="ginfo">${info}</div>` : ''}${m && m.txt ? `<p class="gtxt">${m.txt}</p>` : ''}
+    ${m ? `<button class="gmiss${m.dark ? ' dk' : ''}" ${m.act}>${ic(m.icon, 16)}${m.btn}</button>` : ''}</div>`;
+}
+function goals() {
+  const L = [...DB.goals].map((g) => ({ g, lv: gLevel(g) })).sort((a, b) => b.lv - a.lv || (a.g.due || '9999') .localeCompare(b.g.due || '9999'));
+  const cnt = [0, 1, 2, 3].map((i) => L.filter((x) => x.lv === i).length), f = UI.glf;
+  let h = `<div class="hero ghero"><div class="logo">${svgi('logo', 19)}Orbe<button class="gnew" data-newgoal aria-label="Nova meta">${ic('add', 20)}</button></div>
+    <h2>Metas</h2><p>Meta + prazo + plano + constância</p>
+    <div class="gstairs">${GL.map((x, i) => `<button class="gst l${i}${f === i ? ' on' : ''}" data-glf="${i}" aria-pressed="${f === i}"><span class="gstb" style="height:${26 + i * 16}px">${cnt[i]}</span><b>${x.k}</b><small>${x.d}</small></button>`).join('')}</div></div>`;
+  if (!L.length) return h + `<div class="empty-big">${ic('flag')}${GQUOTE}<br><br>Comece escrevendo o que tu quer alcançar.</div><button class="newarea" data-newgoal>${ic('add', 18)}Primeira meta</button>`;
+  const vis = L.filter((x) => f === undefined || f === null || x.lv === f);
+  h += `<div class="sec-h">Suas metas<small>${f === undefined || f === null ? 'da mais perto do sucesso' : `${GL[f].k} · toque de novo para ver todas`}</small></div><div class="glist">${vis.map((x) => goalCard(x.g)).join('') || '<p class="empty">Nenhuma meta neste degrau.</p>'}</div>`;
+  h += `<button class="newarea" data-newgoal>${ic('add', 18)}Meta</button><p class="gquote">${GQUOTE}</p>`;
+  return h;
+}
+const GLTXT = [
+  'Por enquanto é uma fantasia. Dê um prazo para virar objetivo.',
+  'Tem prazo. Quebre em etapas para virar estratégia.',
+  'Tem prazo e plano. Ligue um hábito e seja constante para virar sucesso.',
+  'Tem prazo, plano e você está sendo constante. É assim que a meta vira resultado.',
+];
+function gdetail() {
+  const g = goalOf(UI.gdet); if (!g) return '';
+  const lv = gLevel(g), st = gSteps(g), c = gConst(g), done = st.filter((x) => x.done).length, pPlan = st.length ? Math.round((done / st.length) * 100) : 0, ar = area(g.a);
+  let h = `<div class="dhd"><button class="rbtn" data-gback aria-label="Voltar">${ic('arrow_back', 20)}</button><small>Metas${ar ? ' › ' + esc(ar.n) : ''}</small><button class="rbtn" data-gedit="${g.id}" aria-label="Editar meta">${svgi('editar', 18)}</button></div>
+  <div class="gdh"><span class="glv l${lv}">${GL[lv].k}${lv === 3 ? ' · no caminho' : ''}</span><h3>${esc(g.t)}</h3>
+    <div class="gsteps4">${['Meta', 'Prazo', 'Plano', 'Constância'].map((n, i) => `<div><span class="${i <= lv ? 'on' : ''}"></span><small>${n}</small></div>`).join('')}</div>
+    <p>${lv === 2 && c ? `Falta constância: ${Math.round(c.pct * 100)}% dos últimos 14 dias. Chegue a metade para virar sucesso.` : GLTXT[lv]}</p></div>`;
+  // 1 · meta
+  h += `<div class="gsec"><div class="gsh"><span>1</span><b>Meta</b><small>sozinha é fantasia</small></div>
+    <div class="gbox"><span class="gbig">${esc(g.t)}</span>${g.why ? `<small>Por quê: ${esc(g.why)}</small>` : `<button class="glink" data-gedit="${g.id}">+ escrever o porquê</button>`}</div></div>`;
+  // 2 · prazo
+  h += `<div class="gsec"><div class="gsh"><span>2</span><b>Prazo</b><small>vira objetivo</small></div>`;
+  if (g.due) {
+    const created = (g.created || new Date().toISOString()).slice(0, 10), tot = Math.max(1, dayDiff(created, g.due)), past = Math.max(0, Math.min(100, Math.round((dayDiff(created, today()) / tot) * 100)));
+    const pace = !st.length ? '' : pPlan >= past + 5 ? 'Adiantado.' : pPlan + 10 >= past ? 'No ritmo.' : 'Atrasado: acelere o plano.';
+    h += `<button class="gbox gdue" data-gdue="${g.id}"><span class="gdl"><span>${fmtLong(g.due)}</span><b class="${gDays(g) < 0 ? 'late' : ''}">${gDays(g) >= 0 ? pl(gDays(g), 'dia', 'dias') : gLeft(g)}</b></span>
+      <span class="gbar"><i style="width:${past}%"></i></span><small>${past}% do tempo já passou${st.length ? ` · ${pPlan}% do plano feito. ${pace}` : ''}</small></button>`;
+  } else h += `<button class="gmiss dk" data-gdue="${g.id}">${ic('calendar_month', 16)}Dar um prazo</button>`;
+  h += `</div>`;
+  // 3 · plano
+  h += `<div class="gsec"><div class="gsh"><span>3</span><b>Plano</b><small>vira estratégia</small></div><div class="gbox glistp">`;
+  h += st.map((s) => `<div class="gstep${s.done ? ' done' : ''}"><button class="sck2" data-gstep="${s.id}" aria-label="${s.done ? 'Desmarcar' : 'Concluir'} etapa"></button><span class="stt">${esc(s.t)}</span>${s.linked ? `<span class="gtk">${s.linked.date ? 'tarefa · ' + fmtShort(s.linked.date) : 'tarefa'}</span>` : `<button class="gtk b" data-gtask="${s.id}">virar tarefa</button>`}<button class="rbtn sm" data-gdelstep="${s.id}" aria-label="Tirar etapa">${ic('close', 15)}</button></div>`).join('');
+  h += `<div class="gstep add"><span class="sck2 ghost"></span><input id="gnewstep" placeholder="Adicionar etapa" autocomplete="off" enterkeyhint="done" aria-label="Nova etapa"><button class="rbtn sm" data-gaddstep aria-label="Adicionar etapa">${ic('add', 16)}</button></div></div>`;
+  h += `<div class="gbox ghow"><small>Estratégia · como</small>${g.how ? `<span>${esc(g.how)}</span>` : `<button class="glink" data-gedit="${g.id}">+ escrever como você vai fazer</button>`}</div></div>`;
+  // 4 · constância
+  const hs = gHabits(g), t0 = today();
+  h += `<div class="gsec" id="ghabs"><div class="gsh"><span>4</span><b>Constância</b><small>vira sucesso</small></div>`;
+  if (hs.length) h += `<div class="gbox">${hs.map((x) => { const sc = hScore(x).info || {}; const bad = x.type === 'bad'; return `<div class="ghab"><div class="gdl"><span>${esc(x.n)}</span><b>${sc.cur ? pl(sc.cur, 'dia seguido', 'dias seguidos') : bad ? 'sem cair' : 'comece hoje'}</b></div><div class="gdots">${[...Array(14)].map((_, i) => { const d = addDays(t0, i - 13), m = hMarked(x, d), ok = bad ? !m && d < t0 : m; return `<i class="${ok ? 'on' : ''}${d === t0 ? ' t' : ''}"></i>`; }).join('')}</div></div>`; }).join('')}</div>`;
+  h += `<div class="chips">${DB.habits.map((x) => `<button class="chip${(g.habits || []).includes(x.id) ? ' on' : ''}" data-ghab="${x.id}">${esc(x.n)}</button>`).join('')}<button class="chip dash" data-gnewhab>${ic('add', 15)}Novo hábito</button></div></div>`;
+  h += `<p class="gquote">${GQUOTE}</p>`;
+  return h;
+}
+function renderGdet(keep = true) { const el = $('.gdetail'); if (!el) return; const sc = el.scrollTop; el.innerHTML = gdetail(); if (keep) el.scrollTop = sc; }
+function openGoal(id, focus) {
+  UI.gdet = id; renderGdet(false); const el = $('.gdetail'); el.classList.add('open');
+  pushLayer(() => { el.classList.remove('open'); UI.gdet = null; });
+  if (focus) setTimeout(() => { const t = focus === 'hab' ? $('#ghabs') : $('#gnewstep'); if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (focus === 'step') t.focus({ preventScroll: true }); } }, 420);
+}
+function closeGoal() { const el = $('.gdetail'); if (!el || !el.classList.contains('open')) return; el.classList.remove('open'); UI.gdet = null; popLayer(); }
+function gAddStep() {
+  const i = $('#gnewstep'), v = i && i.value.trim(), g = goalOf(UI.gdet); if (!v || !g) { if (i) i.focus(); return; }
+  g.steps = g.steps || []; g.steps.push({ id: uid(), t: v, done: false, doneAt: null, task: null });
+  save(); renderGdet(); render('goals'); const n = $('#gnewstep'); if (n) n.focus({ preventScroll: true });
+}
+// janela de criar/editar meta
+function goalSheet() {
+  const F = UI.gform, lv = gLevel({ due: F.due, steps: F.steps, habits: F.habits });
+  const q = (m) => { const d = new Date(); d.setMonth(d.getMonth() + m); return ymd(d); };
+  const yEnd = `${new Date().getFullYear()}-12-31`;
+  return `<div class="bd"></div><div class="pn"><span class="grab"></span><h4>${F.id ? 'Editar meta' : 'Nova meta'}<button class="rbtn" data-closegoal aria-label="Fechar">${ic('close', 18)}</button></h4>
+  <div class="glive">${gBars(lv, true)}<div><small>Até agora isto é</small><b>${GL[lv].k}</b></div><span>${['Dê um prazo para virar objetivo.', 'Já tem prazo. Coloque as etapas para virar estratégia.', 'Tem plano. Ligue um hábito para chegar ao sucesso.', 'Tem tudo: agora é constância.'][lv]}</span></div>
+  <div class="lbl">1 · O que você quer alcançar?</div><input class="ttl" id="gname" placeholder="Ex.: 5 clientes no SaaS" value="${esc(F.t)}" autocomplete="off" enterkeyhint="next">
+  <input class="ttl sm" id="gwhy" placeholder="Por quê? (opcional)" value="${esc(F.why)}" autocomplete="off" enterkeyhint="next">
+  <div class="lbl">2 · Até quando?</div>
+  <div class="chips">${[[q(1), '1 mês'], [q(3), '3 meses'], [q(6), '6 meses'], [yEnd, 'Fim do ano']].map(([d, l]) => `<button class="chip${F.due === d ? ' on' : ''}" data-gfdue="${d}">${l}</button>`).join('')}</div>
+  <div class="dts"><button class="dt${F.due ? ' set' : ''}" data-gfcal>${svgi('data', 19)}<span>${F.due ? fmtLong(F.due) : 'Escolher a data'}</span>${F.due ? `<span class="x" data-gfnodue>${ic('close', 16)}</span>` : ''}</button></div>
+  <div class="lbl">3 · Qual o plano? (etapas)</div><div class="fsubs">${(F.steps || []).map((x) => `<div class="fsub"><span class="sck ghost"></span><span class="stt">${esc(x.t)}</span><button class="rbtn sm" data-gfdel="${x.id}" aria-label="Tirar etapa">${ic('close', 15)}</button></div>`).join('')}<div class="fsub add"><span class="sck ghost">${ic('add', 14)}</span><input id="gfstep" placeholder="Adicionar etapa" autocomplete="off" enterkeyhint="next" aria-label="Nova etapa"><button class="rbtn sm" data-gfadd aria-label="Adicionar etapa">${ic('add', 16)}</button></div></div>
+  <input class="ttl sm" id="ghow" placeholder="Como (estratégia). Ex.: 10 ligações por noite" value="${esc(F.how)}" autocomplete="off">
+  <div class="lbl">4 · Constância (hábito que sustenta)</div><div class="chips">${DB.habits.map((x) => `<button class="chip${F.habits.includes(x.id) ? ' on' : ''}" data-gfhab="${x.id}">${esc(x.n)}</button>`).join('') || '<span class="muted" style="font-size:13px">Crie hábitos na aba Constância.</span>'}</div>
+  <div class="lbl">Área</div><div class="chips">${DB.areas.map((v) => `<button class="chip${v.k === F.a ? ' on' : ''}" data-gfarea="${v.k}">${ic(v.i, 16)}${esc(v.n)}</button>`).join('')}</div>
+  <div class="save-row">${F.id ? `<button class="del" data-gdel>${ic('remove_circle', 18)}</button>` : ''}<button class="save" data-gsave>${F.id ? 'Pronto' : 'Criar meta'}</button></div></div>`;
+}
+function readGoalForm() { const F = UI.gform; if (!F) return; const v = (s) => { const e = $(s); return e ? e.value : null; }; if (v('#gname') !== null) F.t = v('#gname'); if (v('#gwhy') !== null) F.why = v('#gwhy'); if (v('#ghow') !== null) F.how = v('#ghow'); }
+function rerenderGoal() { readGoalForm(); $('[data-sh="goal"]').innerHTML = goalSheet(); }
+function openGoalForm(g) {
+  UI.gform = g ? { id: g.id, t: g.t, why: g.why || '', due: g.due || null, how: g.how || '', a: g.a || (DB.areas[0] || {}).k, steps: (g.steps || []).map((x) => ({ ...x })), habits: [...(g.habits || [])] }
+    : { id: null, t: '', why: '', due: null, how: '', a: (DB.areas[0] || {}).k, steps: [], habits: [] };
+  openSheet('goal', goalSheet()); if (!g) setTimeout(() => $('#gname') && $('#gname').focus(), 350);
+}
+function gfAddStep() { const i = $('#gfstep'), v = i && i.value.trim(); if (!v) return; readGoalForm(); UI.gform.steps.push({ id: uid(), t: v, done: false, doneAt: null, task: null }); rerenderGoal(); const n = $('#gfstep'); if (n) n.focus(); }
+function saveGoal() {
+  { const i = $('#gfstep'); if (i && i.value.trim()) gfAddStep(); }
+  readGoalForm(); const F = UI.gform, t = F.t.trim();
+  if (!t) { toast('Escreva a meta.'); $('#gname').focus(); return; }
+  const data = { t, why: F.why.trim(), due: F.due, how: F.how.trim(), a: F.a, steps: F.steps, habits: F.habits };
+  if (F.id) { Object.assign(goalOf(F.id), data); toast('Meta atualizada.'); }
+  else { DB.goals.push({ id: uid(), created: new Date().toISOString(), ...data }); toast(`Meta criada: ${GL[gLevel(data)].k.toLowerCase()}.`); }
+  save(); closeSheet('goal'); render('goals'); renderGdet();
+}
+// calendário: escolher o prazo (de uma meta aberta ou do formulário)
+function goalCal(target) { UI.calFor = target; const cur = target === 'form' ? UI.gform.due : (goalOf(target) || {}).due; const b = parse(cur || today()); UI.cm = new Date(b.getFullYear(), b.getMonth(), 1); openPop(calPop()); }
+function calSel() { if (!UI.calFor) return UI.form && UI.form.date; return UI.calFor === 'form' ? UI.gform && UI.gform.due : (goalOf(UI.calFor) || {}).due; }
+function setGoalDue(v) {
+  const tg = UI.calFor; UI.calFor = null; closePop();
+  if (tg === 'form') { UI.gform.due = v; rerenderGoal(); return; }
+  const g = goalOf(tg); if (!g) return; const was = gLevel(g); g.due = v; save(); render('goals'); renderGdet();
+  if (gLevel(g) > was) toast(`Subiu: agora é ${GL[gLevel(g)].k.toLowerCase()}.`);
+}
+function goalClick(e) {
+  const c = (s) => e.target.closest(s); let x;
+  if ((x = c('[data-glf]'))) { const v = +x.dataset.glf; UI.glf = UI.glf === v ? null : v; render('goals'); return true; }
+  if (c('[data-newgoal]')) { openGoalForm(null); return true; }
+  if ((x = c('[data-gdue]'))) { e.stopPropagation(); goalCal(x.dataset.gdue); return true; }
+  if ((x = c('[data-gopen]'))) { openGoal(x.dataset.gopen, x.dataset.gfocus); return true; }
+  if (c('[data-gback]')) { closeGoal(); return true; }
+  if ((x = c('[data-gedit]'))) { openGoalForm(goalOf(x.dataset.gedit)); return true; }
+  if ((x = c('[data-gstep]'))) {
+    const g = goalOf(UI.gdet), s = g && g.steps.find((y) => y.id === x.dataset.gstep); if (!s) return true;
+    const t = s.task && DB.tasks.find((y) => y.id === s.task), now = new Date().toISOString();
+    if (t) { t.done = !t.done; t.doneAt = t.done ? now : null; s.done = t.done; } else { s.done = !s.done; s.doneAt = s.done ? now : null; }
+    if (s.done && navigator.vibrate) navigator.vibrate(10);
+    save(); renderGdet(); renderAll(); return true;
+  }
+  if ((x = c('[data-gdelstep]'))) { const g = goalOf(UI.gdet); g.steps = g.steps.filter((y) => y.id !== x.dataset.gdelstep); save(); renderGdet(); render('goals'); return true; }
+  if (c('[data-gaddstep]')) { gAddStep(); return true; }
+  if ((x = c('[data-gtask]'))) {
+    const g = goalOf(UI.gdet), s = g && g.steps.find((y) => y.id === x.dataset.gtask); if (!s) return true;
+    const ar = area(g.a) || DB.areas[0], id = uid();
+    DB.tasks.push({ id, t: s.t, a: ar ? ar.k : '', s: ar && ar.subs[0] ? ar.subs[0] : '', q: 2, date: today(), time: null, done: !!s.done, doneAt: s.done ? new Date().toISOString() : null, created: new Date().toISOString(), hist: [], st: [], goal: g.id });
+    s.task = id; save(); renderAll(); renderGdet();
+    const t = DB.tasks.find((y) => y.id === id); openTask({ id, t: t.t, a: t.a, s: t.s, q: t.q, date: t.date, time: t.time, st: [] });
+    toast('Virou tarefa: escolha a data.'); return true;
+  }
+  if ((x = c('[data-ghab]'))) { const g = goalOf(UI.gdet), id = x.dataset.ghab; g.habits = g.habits || []; const was = gLevel(g); g.habits = g.habits.includes(id) ? g.habits.filter((y) => y !== id) : [...g.habits, id]; save(); renderGdet(); render('goals'); if (gLevel(g) > was) toast(`Subiu: agora é ${GL[gLevel(g)].k.toLowerCase()}.`); return true; }
+  if (c('[data-gnewhab]')) { UI.linkHab = UI.gdet; UI.habForm = { id: null, n: '', type: 'good', i: 'water_drop', goal: 66 }; openSheet('habit', habSheet()); setTimeout(() => $('#hname') && $('#hname').focus(), 350); return true; }
+  // formulário
+  if (c('[data-sh="goal"] .bd') || c('[data-closegoal]')) { closeSheet('goal'); return true; }
+  if ((x = c('[data-gfdue]'))) { readGoalForm(); UI.gform.due = x.dataset.gfdue; rerenderGoal(); return true; }
+  if (c('[data-gfnodue]')) { readGoalForm(); UI.gform.due = null; rerenderGoal(); return true; }
+  if (c('[data-gfcal]')) { readGoalForm(); goalCal('form'); return true; }
+  if ((x = c('[data-gfhab]'))) { readGoalForm(); const id = x.dataset.gfhab, F = UI.gform; F.habits = F.habits.includes(id) ? F.habits.filter((y) => y !== id) : [...F.habits, id]; rerenderGoal(); return true; }
+  if ((x = c('[data-gfarea]'))) { readGoalForm(); UI.gform.a = x.dataset.gfarea; rerenderGoal(); return true; }
+  if ((x = c('[data-gfdel]'))) { readGoalForm(); UI.gform.steps = UI.gform.steps.filter((y) => y.id !== x.dataset.gfdel); rerenderGoal(); return true; }
+  if (c('[data-gfadd]')) { gfAddStep(); return true; }
+  if (c('[data-gsave]')) { saveGoal(); return true; }
+  if (c('[data-gdel]')) { const id = UI.gform.id; askConfirm('Excluir esta meta?', 'Excluir', () => { DB.goals = DB.goals.filter((g) => g.id !== id); save(); closeSheet('goal'); closeGoal(); render('goals'); toast('Meta excluída.'); }, 'As tarefas criadas a partir dela continuam.'); return true; }
+  return false;
+}
+
 /* ---------- render ---------- */
-const R = { home, agenda, areas, habits, stats };
+const R = { home, agenda, goals, areas, habits, stats };
 function anim(el) { requestAnimationFrame(() => requestAnimationFrame(() => $$('.bar i[data-w]', el).forEach((b) => (b.style.width = b.dataset.w + '%')))); }
 function render(s, keep = true) {
   if (s === 'habits') { const w0 = $('.hmx-wrap'); const sl = w0 ? w0.scrollLeft : null, keepX = UI.hkeep; UI.hkeep = false; setTimeout(() => { const w = $('.hmx-wrap.month'); if (!w) return; if (keepX && sl !== null) { w.scrollLeft = sl; return; } const t = w.querySelector('th.t'); if (t) w.scrollLeft = t.offsetLeft - w.clientWidth / 2; }, 0); } const el = $(`[data-s="${s}"]`); const sc = el.scrollTop; el.innerHTML = R[s](); if (keep) el.scrollTop = sc; anim(el); }
-function renderAll() { Object.keys(R).forEach((s) => render(s)); if (UI.det) renderDet(); if (typeof widgetPush === 'function') widgetPush(); }
+function renderAll() { Object.keys(R).forEach((s) => render(s)); if (UI.det) renderDet(); if (UI.gdet) renderGdet(); if (typeof widgetPush === 'function') widgetPush(); }
 function renderDet(keep = true) { const el = $('.detail'); const sc = el.scrollTop; el.innerHTML = detail(); if (keep) el.scrollTop = sc; }
 function go(tab) {
   UI.tab = tab;
   $$('.nav button').forEach((b) => b.classList.toggle('on', b.dataset.go === tab));
   playIc($(`.nav [data-go="${tab}"]`));
   $$('.screen').forEach((s) => s.classList.toggle('on', s.dataset.s === tab));
-  closeDetail();
+  closeDetail(); closeGoal();
   render(tab, false);
   saveUI();
 }
@@ -611,7 +819,7 @@ function saveTask() {
 function calPop() {
   const y = UI.cm.getFullYear(), m = UI.cm.getMonth(), first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), t0 = today();
   let cells = ''; for (let i = 0; i < first; i++) cells += '<span></span>';
-  for (let d = 1; d <= n; d++) { const s = ymd(new Date(y, m, d)); cells += `<button class="cd${s === t0 ? ' today' : ''}${s === UI.form.date ? ' sel' : ''}${s < t0 ? ' past' : ''}" data-cd="${s}">${d}</button>`; }
+  for (let d = 1; d <= n; d++) { const s = ymd(new Date(y, m, d)); cells += `<button class="cd${s === t0 ? ' today' : ''}${s === calSel() ? ' sel' : ''}${s < t0 ? ' past' : ''}" data-cd="${s}">${d}</button>`; }
   let k = 1; while (parse(addDays(t0, k)).getDay() !== 1) k++;
   return `<div class="calh"><button data-cm="-1" aria-label="Mês anterior">${ic('chevron_left', 20)}</button><b>${MOF[m]} <span class="muted">${y}</span></b><button data-cm="1" aria-label="Próximo mês">${ic('chevron_right', 20)}</button></div>
   <div class="cal">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((x) => `<span class="wd">${x}</span>`).join('')}${cells}</div>
@@ -926,6 +1134,7 @@ APP.addEventListener('click', (e) => {
   const c = (s) => e.target.closest(s); let x;
   // janelinhas
   if ((x = c('[data-cm]'))) { UI.cm = new Date(UI.cm.getFullYear(), UI.cm.getMonth() + +x.dataset.cm, 1); $('.pop .pc').innerHTML = calPop(); return; }
+  if (UI.calFor && (x = c('[data-cd], [data-quick], [data-nodate]'))) { setGoalDue(x.dataset.cd || (x.dataset.quick !== undefined ? addDays(today(), +x.dataset.quick) : null)); return; }
   if ((x = c('[data-cd]'))) { UI.form.date = x.dataset.cd; closePop(); rerenderTask('date'); return; }
   if ((x = c('[data-quick]'))) { UI.form.date = addDays(today(), +x.dataset.quick); closePop(); rerenderTask('date'); return; }
   if (c('[data-nodate]')) { UI.form.date = null; closePop(); rerenderTask(); return; }
@@ -940,11 +1149,12 @@ APP.addEventListener('click', (e) => {
   }
   if ((x = c('[data-start]'))) { e.stopPropagation(); openFocusPop(x.dataset.start); return; }
   if (c('[data-updchk]')) { checkShell(true); return; }
+  if (goalClick(e)) return;
   if (c('[data-confirm]')) { confirmLater = null; const cb = confirmCb; confirmCb = null; closePop(); if (cb) setTimeout(cb, 50); return; }
-  if (c('.pbd') || c('[data-pclose]')) { if (confirmLater) { confirmLater(); confirmLater = null; } closePop(); return; }
+  if (c('.pbd') || c('[data-pclose]')) { UI.calFor = null; if (confirmLater) { confirmLater(); confirmLater = null; } closePop(); return; }
   // formulário de tarefa
   if (c('[data-clrtime]')) { UI.form.time = null; rerenderTask(); return; }
-  if ((x = c('[data-pick]'))) { readTitle(); if (x.dataset.pick === 'date') { const b = parse(UI.form.date || today()); UI.cm = new Date(b.getFullYear(), b.getMonth(), 1); openPop(calPop()); } else { openPop(timePop()); initWheels(); } return; }
+  if ((x = c('[data-pick]'))) { readTitle(); UI.calFor = null; if (x.dataset.pick === 'date') { const b = parse(UI.form.date || today()); UI.cm = new Date(b.getFullYear(), b.getMonth(), 1); openPop(calPop()); } else { openPop(timePop()); initWheels(); } return; }
   if ((x = c('[data-farea]'))) { readTitle(); UI.form.a = x.dataset.farea; const A = area(UI.form.a); UI.form.s = A.subs[0] || ''; rerenderTask(); return; }
   if ((x = c('[data-fsub]'))) { UI.form.s = x.dataset.fsub; $$('[data-fsub]').forEach((y) => y.classList.toggle('on', y === x)); return; }
   if ((x = c('.qc'))) { UI.form.q = +x.dataset.q; $$('.qc').forEach((y) => y.classList.toggle('on', y === x)); return; }
@@ -984,7 +1194,7 @@ APP.addEventListener('click', (e) => {
     impPreview(); if (!IMP || !IMP.items.length) return;
     if (clearWhat(IMP.items).size && !x.dataset.ok) { askConfirm('Apagar e colar o texto novo?', 'Apagar e colar', () => { const b = $('[data-impgo]'); if (b) { b.dataset.ok = 1; b.click(); } }, 'O que está no app agora (desta conta) sai e entra o que está no texto.'); return; }
     const k = applyImport(IMP.items); IMP = null; closeSheet('imp'); closeSheet('set'); go('home');
-    toast([k.cleared ? 'Apagado o que tinha' : '', k.task || !k.upd ? `${pl(k.task, 'tarefa nova', 'tarefas novas')}` : '', k.upd ? `${pl(k.upd, 'atualizada', 'atualizadas')}` : '', k.del ? `${pl(k.del, 'apagada', 'apagadas')}` : '', k.habit ? `${pl(k.habit, 'hábito', 'hábitos')}` : ''].filter(Boolean).join(', ') + (k.skip ? ` (${k.skip} já existia${k.skip > 1 ? 'm' : ''})` : '') + '.');
+    toast([k.cleared ? 'Apagado o que tinha' : '', k.task || !k.upd ? `${pl(k.task, 'tarefa nova', 'tarefas novas')}` : '', k.upd ? `${pl(k.upd, 'atualizada', 'atualizadas')}` : '', k.del ? `${pl(k.del, 'apagada', 'apagadas')}` : '', k.habit ? `${pl(k.habit, 'hábito', 'hábitos')}` : '', k.goal ? `${pl(k.goal, 'meta', 'metas')}` : ''].filter(Boolean).join(', ') + (k.skip ? ` (${k.skip} já existia${k.skip > 1 ? 'm' : ''})` : '') + '.');
     return;
   }
   if (c('[data-sh="acc"] .bd') || c('[data-closeacc]')) { closeSheet('acc'); return; }
@@ -1064,8 +1274,8 @@ APP.addEventListener('click', (e) => {
   if (c('[data-savehab]')) {
     const F = UI.habForm, n = $('#hname').value.trim(); if (!n) { toast('Dê um nome para o hábito.'); return; }
     if (F.id) Object.assign(DB.habits.find((y) => y.id === F.id), { n, type: F.type, i: F.i, goal: F.goal });
-    else DB.habits.push({ id: uid(), n, type: F.type, i: F.i, goal: F.goal, created: new Date().toISOString(), days: {} });
-    save(); closeSheet('habit'); render('habits'); render('home'); toast(F.id ? 'Hábito atualizado.' : 'Hábito criado.'); return;
+    else { const nid = uid(); DB.habits.push({ id: nid, n, type: F.type, i: F.i, goal: F.goal, created: new Date().toISOString(), days: {} }); const lg = UI.linkHab && goalOf(UI.linkHab); if (lg) { lg.habits = [...(lg.habits || []), nid]; } }
+    UI.linkHab = null; save(); closeSheet('habit'); render('habits'); render('home'); render('goals'); renderGdet(); toast(F.id ? 'Hábito atualizado.' : 'Hábito criado.'); return;
   }
   if (c('[data-delhab]')) { const id = UI.habForm.id; askConfirm('Excluir este hábito?', 'Excluir', () => { DB.habits = DB.habits.filter((y) => y.id !== id); save(); closeSheet('habit'); render('habits'); render('home'); toast('Hábito excluído.'); }); return; }
   if (c('[data-newarea]')) { UI.areaForm = { k: null, n: '', i: 'fitness_center', c: COLORS[(DB.areas.length + 3) % COLORS.length] }; openSheet('area', areaSheet()); return; }
@@ -1093,6 +1303,8 @@ APP.addEventListener('keydown', (e) => {
   if (e.target.id === 'newpart') { e.preventDefault(); addPart(UI.adding); }
   if (e.target.id === 'ttl') { e.preventDefault(); e.target.blur(); }
   if (e.target.id === 'newst') { e.preventDefault(); addSubForm(); }
+  if (e.target.id === 'gnewstep') { e.preventDefault(); gAddStep(); }
+  if (e.target.id === 'gfstep') { e.preventDefault(); gfAddStep(); }
   if (e.target.id === 'newnote' && !e.shiftKey && matchMedia('(pointer:fine)').matches) { e.preventDefault(); addNote(); }
 });
 APP.addEventListener('input', (e) => {
@@ -1283,6 +1495,12 @@ function parseImport(text) {
       items.push(last); return;
     }
     last = null;
+    if (kind === 'meta') {
+      if (!f[1]) { errors.push(`Linha ${i + 1}: meta sem título.`); return; }
+      const dt = parseDate(f[2]); if (f[2] && !dt.ok) errors.push(`Linha ${i + 1}: prazo "${f[2]}" não reconhecido, ficou sem prazo (fantasia).`);
+      last = { kind: 'goal', t: f[1], due: dt.ok ? dt.d : null, area: (f[3] || '').trim(), how: f[4] || '', st: [] };
+      items.push(last); return;
+    }
     if (kind === 'habito') {
       if (!f[1]) { errors.push(`Linha ${i + 1}: hábito sem nome.`); return; }
       const ty = norm(f[2]); const bad = /cortar|ruim|evitar|parar/.test(ty);
@@ -1322,6 +1540,12 @@ function applyImport(items) {
     if (it.kind === 'sub') { const a = findArea(it.area, true), had = a.subs.some((x) => norm(x) === norm(it.sub)); findSub(a, it.sub); if (!had) c.sub++; return; }
     if (it.kind === 'habit') { if (DB.habits.some((h) => norm(h.n) === norm(it.n))) { c.skip++; return; } DB.habits.push({ id: uid(), n: it.n, type: it.type, i: it.type === 'bad' ? 'block' : 'check_circle', goal: it.goal, created: now, days: {} }); c.habit++; return; }
     if (it.kind === 'note') { const a = findArea(it.area, true), sb = findSub(a, it.sub); if (DB.notes.some((n) => n.a === a.k && norm(n.t) === norm(it.t))) { c.skip++; return; } DB.notes.push({ id: uid(), a: a.k, s: sb, t: it.t, at: now }); c.note++; return; }
+    if (it.kind === 'goal') {
+      const ex = DB.goals.find((g) => norm(g.t) === norm(it.t)), a = findArea(it.area, !!it.area);
+      if (ex) { if (it.due) ex.due = it.due; if (it.how) ex.how = it.how; if (a) ex.a = a.k; ex.steps = ex.steps || []; it.st.forEach((x) => { if (!ex.steps.some((y) => norm(y.t) === norm(x))) ex.steps.push({ id: uid(), t: x, done: false, doneAt: null, task: null }); }); c.upd++; return; }
+      DB.goals.push({ id: uid(), t: it.t, why: '', due: it.due, how: it.how, a: a ? a.k : (DB.areas[0] || {}).k, steps: it.st.map((x) => ({ id: uid(), t: x, done: false, doneAt: null, task: null })), habits: [], created: now });
+      c.goal = (c.goal || 0) + 1; return;
+    }
     if (it.kind === 'del') { const n0 = DB.tasks.length; DB.tasks = DB.tasks.filter((t) => t.done || norm(t.t) !== norm(it.t)); c.del += n0 - DB.tasks.length; return; }
     if (it.kind === 'task') {
       // tarefa aberta com o mesmo nome: atualiza o que veio no texto (correção, não conta como adiada)
@@ -1355,7 +1579,7 @@ function impSheet() {
   <p>Subtarefas: linhas começando com "-" logo abaixo da tarefa.</p>
   <p><b>HABITO</b> | nome | Construir ou Cortar | meta em dias</p>
   <p><b>AREA</b> | nome · <b>SUBAREA</b> | Área &gt; nome · <b>NOTA</b> | Área &gt; Subárea | texto</p>
-  <p>Áreas e subáreas que ainda não existem são criadas. Se já existir uma tarefa aberta com o mesmo nome, ela é <b>atualizada</b> (área, prioridade, data e hora que vierem no texto). Hábito com o mesmo nome não é repetido.</p><p><b>APAGAR</b> | título apaga a tarefa aberta com esse nome.</p><p><b>LIMPAR</b> | tudo (ou tarefas, hábitos, anotações) apaga isso do app antes de colar o resto. Áreas e subáreas ficam.</p></div></details></div>`;
+  <p>Áreas e subáreas que ainda não existem são criadas. Se já existir uma tarefa aberta com o mesmo nome, ela é <b>atualizada</b> (área, prioridade, data e hora que vierem no texto). Hábito com o mesmo nome não é repetido.</p><p><b>APAGAR</b> | título apaga a tarefa aberta com esse nome.</p><p><b>META</b> | título | prazo | Área | como, e linhas "- " abaixo viram as etapas do plano.</p><p><b>LIMPAR</b> | tudo (ou tarefas, hábitos, anotações) apaga isso do app antes de colar o resto. Áreas e subáreas ficam.</p></div></details></div>`;
 }
 let IMP = null, IMP_T = null;
 function impPreview() {
@@ -1366,8 +1590,8 @@ function impPreview() {
   if (!r.items.length && !r.errors.length) h = '<p class="hint">Nada para adicionar ainda.</p>';
   const cw = clearWhat(r.items);
   if (cw.size) { const nm = { tasks: 'tarefas', habits: 'hábitos', notes: 'anotações' }; h += `<div class="impwarn">${ic('warning', 18)}<span>Antes de adicionar, vai <b>apagar ${[...cw].map((k) => `${DB[k].length} ${nm[k]}`).join(', ')}</b> que estão no app agora (desta conta). As áreas e subáreas ficam.</span></div>`; }
-  if (r.items.length) h += `<div class="impsum"><b>${pl(n('task'), 'tarefa', 'tarefas')}</b>${sts ? ` com ${pl(sts, 'subtarefa', 'subtarefas')}` : ''} · <b>${pl(n('habit'), 'hábito', 'hábitos')}</b>${n('area') ? ` · ${pl(n('area'), 'área', 'áreas')}` : ''}${n('sub') ? ` · ${pl(n('sub'), 'subárea', 'subáreas')}` : ''}${n('note') ? ` · ${pl(n('note'), 'anotação', 'anotações')}` : ''}<small>${[1, 2, 3, 4].map((q) => `${Q[q].k}: ${qn(q)}`).join(' · ')}</small></div>
-    <div class="implist">${r.items.filter((x) => x.kind === 'task' || x.kind === 'habit' || x.kind === 'del').slice(0, 40).map((x) => x.kind === 'del' ? `<div>${ic('delete', 14)}<span>${esc(x.t)} <em class="upd">apaga</em><small>${DB.tasks.some((t) => !t.done && norm(t.t) === norm(x.t)) ? 'tarefa encontrada' : 'não encontrei essa tarefa'}</small></span></div>` : x.kind === 'task' ? `<div>${mini(x.q)}<span>${esc(x.t)}${!cw.has('tasks') && DB.tasks.some((t) => !t.done && norm(t.t) === norm(x.t)) ? ' <em class="upd">atualiza</em>' : ''}<small>${esc(x.area || areaName(DB.areas[0] && DB.areas[0].k))}${x.sub ? ' · ' + esc(x.sub) : ''} · ${x.date ? fmtDate(x.date, true) : 'sem prazo'}${x.time ? ' · ' + x.time : ''}${x.st.length ? ` · ${x.st.length} subtarefas` : ''}</small></span></div>` : `<div>${ic(x.type === 'bad' ? 'block' : 'check_circle', 14)}<span>${esc(x.n)}<small>${x.type === 'bad' ? 'Cortar' : 'Construir'} · meta de ${x.goal} dias</small></span></div>`).join('')}</div>`;
+  if (r.items.length) h += `<div class="impsum"><b>${pl(n('task'), 'tarefa', 'tarefas')}</b>${sts ? ` com ${pl(sts, 'subtarefa', 'subtarefas')}` : ''} · <b>${pl(n('habit'), 'hábito', 'hábitos')}</b>${n('area') ? ` · ${pl(n('area'), 'área', 'áreas')}` : ''}${n('sub') ? ` · ${pl(n('sub'), 'subárea', 'subáreas')}` : ''}${n('note') ? ` · ${pl(n('note'), 'anotação', 'anotações')}` : ''}${n('goal') ? ` · <b>${pl(n('goal'), 'meta', 'metas')}</b>` : ''}<small>${[1, 2, 3, 4].map((q) => `${Q[q].k}: ${qn(q)}`).join(' · ')}</small></div>
+    <div class="implist">${r.items.filter((x) => x.kind === 'task' || x.kind === 'habit' || x.kind === 'del' || x.kind === 'goal').slice(0, 40).map((x) => x.kind === 'goal' ? `<div>${ic('flag', 14)}<span>${esc(x.t)}${DB.goals.some((g) => norm(g.t) === norm(x.t)) ? ' <em class="upd">atualiza</em>' : ''}<small>Meta · ${x.due ? 'prazo ' + fmtShort(x.due) : 'sem prazo (fantasia)'}${x.st.length ? ` · ${pl(x.st.length, 'etapa', 'etapas')}` : ''}</small></span></div>` : x.kind === 'del' ? `<div>${ic('delete', 14)}<span>${esc(x.t)} <em class="upd">apaga</em><small>${DB.tasks.some((t) => !t.done && norm(t.t) === norm(x.t)) ? 'tarefa encontrada' : 'não encontrei essa tarefa'}</small></span></div>` : x.kind === 'task' ? `<div>${mini(x.q)}<span>${esc(x.t)}${!cw.has('tasks') && DB.tasks.some((t) => !t.done && norm(t.t) === norm(x.t)) ? ' <em class="upd">atualiza</em>' : ''}<small>${esc(x.area || areaName(DB.areas[0] && DB.areas[0].k))}${x.sub ? ' · ' + esc(x.sub) : ''} · ${x.date ? fmtDate(x.date, true) : 'sem prazo'}${x.time ? ' · ' + x.time : ''}${x.st.length ? ` · ${x.st.length} subtarefas` : ''}</small></span></div>` : `<div>${ic(x.type === 'bad' ? 'block' : 'check_circle', 14)}<span>${esc(x.n)}<small>${x.type === 'bad' ? 'Cortar' : 'Construir'} · meta de ${x.goal} dias</small></span></div>`).join('')}</div>`;
   if (r.errors.length) h += `<div class="imperr">${r.errors.slice(0, 8).map((e) => `<p>${esc(e)}</p>`).join('')}</div>`;
   $('#impprev').innerHTML = h;
   $('[data-impgo]').disabled = !r.items.length;
@@ -1394,6 +1618,8 @@ if (SUPA_URL && SUPA_KEY) {
 
 $$('.nav [data-go]').forEach((b) => { const m = b.querySelector('.ms'); if (m) m.outerHTML = svgi(TABI[b.dataset.go], 23); });
 { const sl = $('.side-logo .ms'); if (sl) sl.outerHTML = svgi('logo', 21, true); }
+// o foco num campo pode rolar a moldura do app (que não rola); volta sempre para o lugar
+APP.addEventListener('scroll', () => { if (APP.scrollTop || APP.scrollLeft) { APP.scrollTop = 0; APP.scrollLeft = 0; } });
 renderAll();
 restoreUI();
 setTimeout(() => playIc($('[data-s="home"] .logo')), 350);

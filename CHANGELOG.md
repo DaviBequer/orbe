@@ -2,6 +2,17 @@
 
 A versão é um número inteiro que sobe a cada atualização (`orbe/version.js`).
 
+## v29 — 2026-11-22
+- **Aba Metas** (entre Planos e Caderno), na estrutura "meta sem prazo é fantasia; com prazo, objetivo; com prazo
+  e plano, estratégia; com constância, sucesso".
+  - Lista: topo preto com a escada dos 4 degraus (toque filtra), cartões com o degrau, a barrinha de 4 partes,
+    prazo/plano/constância e o que falta para subir (Dar um prazo, Falta um plano, Falta constância).
+  - Detalhe: Meta (e o porquê), Prazo (dias que faltam, tempo passado × plano feito: adiantado/no ritmo/atrasado),
+    Plano (etapas com check, "virar tarefa", estratégia/como) e Constância (hábitos ligados com os últimos 14 dias).
+  - Nova meta: preenchida na ordem da frase, mostrando ao vivo o degrau em que ela está.
+  - Sucesso = prazo + etapas + hábitos ligados cumpridos em pelo menos metade dos últimos 14 dias.
+- Colar: `META | título | prazo | Área | como`, com linhas "- " viram as etapas.
+
 ## v28 — 2026-11-20
 - **Android (app 2):** cronômetro fora do app. Notificação com contagem regressiva (barra e tela de bloqueio) e,
   com a permissão "aparecer sobre outros apps", uma janelinha preta por cima de tudo quando o Orbe sai da tela

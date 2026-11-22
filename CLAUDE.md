@@ -7,7 +7,7 @@ Uso pessoal do dono, no **Android** (Chrome) e no **computador**. Layout de celu
 900px vira layout de computador (menu lateral, duas colunas, janelas centralizadas, atalhos N e Esc).
 
 ## O que tem
-Abas (nome na tela → código): Foco → `home`, Planos → `agenda`, Caderno → `areas`, Constância → `habits`, Pulso → `stats`.
+Abas (nome na tela → código): Foco → `home`, Planos → `agenda`, Metas → `goals`, Caderno → `areas`, Constância → `habits`, Pulso → `stats`.
 Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva rápido / Quando der (antes Delegar/Solte; o colar ainda aceita os nomes antigos); hábitos: Construir / Cortar.
 - **Hoje:** topo preto (saudação, progresso, 4 blocos da matriz de Eisenhower que filtram), "Próximo importante",
   tarefas de hoje e atrasadas por prioridade, amanhã (ou próximos dias) e sem data.
@@ -36,6 +36,10 @@ Partes de uma área aparecem como "subáreas". Matriz: Faça / Planeje / Resolva
   Flutuar: `openPip()` usa Document Picture-in-Picture (Chrome do computador) ou vídeo PiP de um canvas (`drawPip`, celular).
   No computador (≥900px e mouse) `startFocus` já chama `openPip(true)`; se o Document PiP falhar, tenta o vídeo PiP.
   Concluir soma os minutos em `t.spent`.
+- **Metas** (`goals()`, `gdetail()`, `goalSheet()`): `DB.goals` = [{id, t, why, a, due, how, steps:[{id,t,done,doneAt,task}], habits:[ids], created}].
+  `gLevel()`: 0 Fantasia (sem prazo), 1 Objetivo (prazo), 2 Estratégia (prazo + etapas), 3 Sucesso (+ hábitos ligados feitos em ≥50%
+  dos últimos 14 dias, `gConst()`). Etapa "virar tarefa" cria tarefa com `goal` e liga em `step.task` (a etapa fica feita quando a tarefa fica).
+  Prazo pelo calendário do app (`goalCal()`/`UI.calFor`). Colar: `META | título | prazo | Área | como` + linhas "- " = etapas.
 - Voltar do Android: fecha janela → volta para Hoje → em Hoje sai só com dois toques (trava re-armada no primeiro
   toque, porque o Chrome ignora entradas de histórico sem gesto). Ao reabrir, restaura a tela (`localStorage['orbe.ui']`).
 

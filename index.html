@@ -24,17 +24,20 @@
   <main class="screens">
     <section class="screen on" data-s="home"></section>
     <section class="screen" data-s="agenda"></section>
+    <section class="screen" data-s="goals"></section>
     <section class="screen" data-s="areas"></section>
     <section class="screen" data-s="habits"></section>
     <section class="screen" data-s="stats"></section>
   </main>
   <div class="detail" aria-live="polite"></div>
+  <div class="detail gdetail" aria-live="polite"></div>
   <button class="fab" aria-label="Anotar tarefa"><span class="ms">add</span></button>
   <nav class="nav">
     <div class="side-logo"><span class="ms">blur_circular</span>Orbe</div>
     <button class="side-new" data-new><span class="ms">add</span>Anotar tarefa<kbd>N</kbd></button>
     <button data-go="home" class="on"><span class="ms">home</span><span>Foco</span></button>
     <button data-go="agenda"><span class="ms">event_note</span><span>Planos</span></button>
+    <button data-go="goals"><span class="ms">flag</span><span>Metas</span></button>
     <button data-go="areas"><span class="ms">auto_stories</span><span>Caderno</span></button>
     <button data-go="habits"><span class="ms">checklist</span><span>Constância</span></button>
     <button data-go="stats"><span class="ms">monitor_heart</span><span>Pulso</span></button>
@@ -45,6 +48,7 @@
   <div class="sheet" data-sh="acc"></div>
   <div class="sheet" data-sh="imp"></div>
   <div class="sheet" data-sh="habit"></div>
+  <div class="sheet full" data-sh="goal"></div>
   <div class="pop"></div>
   <div class="toast" role="status"></div>
 </div>
